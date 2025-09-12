@@ -2,7 +2,7 @@ from multiprocessing import Pool
 
 import numpy as np
 import torch
-import utils.dynamical_systems
+import utils.dynamical_systems as dyn_sys
 from tqdm.auto import tqdm
 import os
 
@@ -38,7 +38,7 @@ class Dataset:
         self.data_set_name = data_set_name
         self.path = dynamical_system_name + "/" + data_set_name
         if dynamical_system_name == 'lorenz':
-            dynamical_system = utils.dynamical_systems.lorenz
+            dynamical_system = dyn_sys.lorenz
 
         if load_data:
             self.tt = np.load(self.path + "/time_array.npy")
@@ -50,7 +50,7 @@ class Dataset:
             time_array = np.array([i*step for i in range(len_trajectories)])
             self.ids = np.arange(num_trajectories)
             ds = dynamical_system(step, parameters, method)
-            init_conds = ds.generate_ics(num_trajectories, initial_point, sigma)
+            init_conds = dyn_sys.generate_points(num_trajectories, initial_point, sigma)
             trajectories = ds.integrate(init_conds, len_trajectories)
 
             self.input_data = trajectories[:, :-1, :]

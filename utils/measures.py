@@ -74,4 +74,5 @@ def MMD(sample1,sample2,kernel):
 
     print('xy', xy)
 
-    return np.sqrt(xx + yy - 2*xy)
+    mmd_2 = np.max(xx + yy - 2*xy, 0) # the above gives an unbiased estimate, but may be negative
+    return np.sqrt(mmd_2)

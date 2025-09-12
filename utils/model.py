@@ -82,7 +82,7 @@ class ESN(nn.Module):
 
         # Reservoir
         W_in = torch.rand((reservoir_size, input_size)) - 1 / 2.0
-        W_hat = torch.rand((reservoir_size, reservoir_size)) - 1 / 2.0
+        W_hat = torch.randn((reservoir_size, reservoir_size))
 
         W_in = scale_in * W_in
         W_hat = self.rescale_contractivity(W_hat, scale_rec, rec_rescaling_method)
@@ -192,7 +192,8 @@ class ESNModel:
                 torch.tensor(clf.coef_, dtype=torch.float64).to(self.device)
             )
             self.net.readout.fc_layers[0].bias = torch.nn.Parameter(
-                torch.zeros_like(self.net.readout.fc_layers[0].bias).to(self.device)
+                torch.tensor(clf.intercept_, dtype=torch.float64).to(self.device)
+                # torch.zeros_like(self.net.readout.fc_layers[0].bias).to(self.device)
             )
             sum_loss = self.criterion(self.net.readout(out), y.to(self.device)).detach().cpu().numpy()
             cnt = 1
@@ -387,7 +388,8 @@ class RCNModel(ESNModel):
                 torch.tensor(clf.coef_, dtype=torch.float64).to(self.device)
             )
             self.net.readout.fc_layers[0].bias = torch.nn.Parameter(
-                torch.zeros_like(self.net.readout.fc_layers[0].bias).to(self.device)
+                torch.tensor(clf.intercept_, dtype=torch.float64).to(self.device)
+                # torch.zeros_like(self.net.readout.fc_layers[0].bias).to(self.device)
             )
             sum_loss = self.criterion(self.net.readout(out), y.to(self.device)).detach().cpu().numpy()
             cnt = 1

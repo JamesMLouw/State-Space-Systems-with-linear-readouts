@@ -17,14 +17,21 @@ torch.set_default_dtype(config["TRAINING"]["dtype"])
 if not os.path.exists(config["PATH"]):
     os.makedirs(config["PATH"])
 
+
 dataset_train = Dataset(
-    config["DATA"]["n_train"], config["DATA"]["l_trajectories"], config["DATA"]["parameters"]
+    config["DATA"]["n_train"], config["DATA"]["l_trajectories"], config["DATA"]["step"], 
+    config["DATA"]["dynamical_system_name"], config["DATA"]["parameters"], config["DATA"]["y0"], 
+    config["DATA"]["sigma"], config["DATA"]["data_type"], config["DATA"]["method"], config["DATA"]["load_data"], 'train'
 )
 dataset_val = Dataset(
-    config["DATA"]["n_val"], config["DATA"]["l_trajectories"], config["DATA"]["parameters"]
+    config["DATA"]["n_val"], config["DATA"]["l_trajectories"], config["DATA"]["step"], 
+    config["DATA"]["dynamical_system_name"], config["DATA"]["parameters"], config["DATA"]["y0"], 
+    config["DATA"]["sigma"], config["DATA"]["data_type"], config["DATA"]["method"], config["DATA"]["load_data"], 'validate'
 )
-dataset_test = Dataset(
-    config["DATA"]["n_test"], config["DATA"]["l_trajectories_test"], config["DATA"]["parameters"]
+dataset_test = Dataset( 
+    config["DATA"]["n_test"], config["DATA"]["l_trajectories"], config["DATA"]["step"], 
+    config["DATA"]["dynamical_system_name"], config["DATA"]["parameters"], config["DATA"]["y0"], 
+    config["DATA"]["sigma"], config["DATA"]["data_type"], config["DATA"]["method"], config["DATA"]["load_data"], 'test'
 )
 
 #%%
@@ -46,7 +53,7 @@ plt.legend()
 plt.savefig("lorenz/fig/test_data.pdf")
 plt.close()
 
-
+#%%
 # Create PyTorch dataloaders for train and validation data
 dataloader_train = DataLoader(
     dataset_train,
@@ -100,8 +107,10 @@ def objective(trial):
     return np.mean((predictions[model.offset :] - dataset_test.input_data[0][model.offset :, 0]) ** 2)
 
 
-study = optuna.create_study(storage="sqlite:///db.sqlite3", study_name="lorenz")  # Specify the storage URL here.
+study = optuna.create_study(storage="sqlite:///db.sqlite3", study_name="lorenz_2")  # Specify the storage URL here.
+#%%
 
 study.optimize(objective, n_trials=300)
 
 print(study.best_params)
+# %%

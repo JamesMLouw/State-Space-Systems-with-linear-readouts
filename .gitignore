@@ -1,3 +1,6 @@
 # Large data files
 *.npy
 *.npz
+
+# dependency folders
+state_space_sys_trans.egg-info/

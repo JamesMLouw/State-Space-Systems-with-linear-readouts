@@ -201,3 +201,19 @@ os.makedirs(folder, exist_ok=True)  # creates the folder if it doesn't exist
 plt.savefig(os.path.join(folder, "predictions.png"))
 plt.close()
 # %%
+
+
+x_plot = predictions[:,:,0].detach().squeeze(0)
+y_plot = predictions[:,:,1].detach().squeeze(0)
+z_plot = predictions[:,:,2].detach().squeeze(0)
+
+fig = plt.figure(figsize=(15, 10))
+ax = fig.add_subplot(1,1,1, projection='3d')
+ax.scatter(x_plot, y_plot, z_plot, s = 5)
+ax.set_xlabel('x')
+ax.set_ylabel('y')
+ax.set_zlabel('z')
+
+
+plt.savefig(os.path.join(folder, "predictions3d.png"))
+plt.close()

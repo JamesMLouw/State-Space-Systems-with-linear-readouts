@@ -36,13 +36,13 @@ def normalise(y):
     y : (batch, seq_length, n_dim)
     """
     mean = y.mean(axis=(0,1), keepdims=True)
-    centered = y - mean
+    centered = y # - mean
 
     max_abs = np.max(np.abs(centered), axis=(0,1), keepdims=True)
-    scale = 1.0 / (5.0 * max_abs)
+    scale = 1.0 / 100 # (5.0 * max_abs)
 
-    mean = mean[0,0,:]
-    scale = scale[0,0,:]
+    mean = np.zeros(y.shape[2]) # mean[0,0,:]
+    scale = np.array([1 /100 for _ in range(y.shape[2])]) # scale[0,0,:]
 
     return (shift_scale(y, mean, scale), mean, scale)
 

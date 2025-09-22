@@ -35,15 +35,45 @@ elif RC_type == 'RCN':
 else:
     print('RC not supported')
 
+tag = RC_type + '_ridge_' + str(config["TRAINING"]["ridge"]) + "_model_"
+
 #%% load data
 
-dataset_test = Dataset(
-    None,
-    None,
-    None,
-    load_data = True,
-    data_set_name = 'test'
+dataset_train = Dataset(
+    num_trajectories = config["DATA"]["n_train"],
+    len_trajectories = config["DATA"]["l_trajectories"],
+    step = config["DATA"]["step"], 
+    dynamical_system_name = config["DATA"]["dynamical_system_name"],
+    parameters = config["DATA"]["parameters"],
+    initial_points_mean = config["DATA"]["y0"], 
+    initial_points_sd = config["DATA"]["initial_points_sd"],
+    data_type = config["DATA"]["data_type"],
+    method = config["DATA"]["method"],
+    load_data = True, 
+    data_set_name = 'train',
+    normalize_data = config["DATA"]["normalize_data"]
 )
+shift, scale = dataset_train.shift, dataset_train.scale
+dataset_train.save_data()
+
+dataset_test = Dataset(
+    num_trajectories = config["DATA"]["n_test"],
+    len_trajectories = config["DATA"]["l_trajectories_test"],
+    step = config["DATA"]["step"], 
+    dynamical_system_name = config["DATA"]["dynamical_system_name"],
+    parameters = config["DATA"]["parameters"],
+    initial_points_mean = config["DATA"]["y0"], 
+    initial_points_sd = config["DATA"]["initial_points_sd"],
+    data_type = config["DATA"]["data_type"],
+    method = config["DATA"]["method"],
+    load_data = config["DATA"]["load_data"], 
+    data_set_name = 'test',
+    normalize_data = config["DATA"]["normalize_data"],
+    shift = shift,
+    scale = scale
+)
+dataset_test.save_data()
+
 #%% load model
 network = Network(
      config["MODEL"]["input_size"],
@@ -54,13 +84,14 @@ network = Network(
     config["MODEL"]["scale_in"],
     config["MODEL"]["leaking_rate"],
 )
+
 model = Model(
     dataloader_train = None,
     dataloader_val = None,
     network = network,
 )
 
-model_name = config["PATH"] + RC_type + "_ridge_" +  str(config["TRAINING"]["ridge"]) + "_model_"
+model_name = config["PATH"] + tag
 model.load_network(model_name)
 
 #%% predict
@@ -74,88 +105,115 @@ predictions, _ = model.integrate(
 
 batch, T, d = predictions.shape
 true_trajs = dataset_test.output_data
-pred_trajs = predictions.detach()
+pred_trajs = predictions.detach().cpu().numpy()
 
 nu1_indices = []
 nu2_indices = []
+
+# separate trajectories based on their first coordinate when warmup ends
 for i in range(batch):
     z = true_trajs[i,warmup-1,:]
     if z[0] >=0:
         nu1_indices.append(i)
     else:
         nu2_indices.append(i)
+
 n_nu1 = len(nu1_indices)
 n_nu2 = len(nu2_indices)
+
 nu1_trajs_true = np.zeros((n_nu1, T, d))
 nu1_trajs_pred = np.zeros((n_nu1, T, d))
 nu2_trajs_true = np.zeros((n_nu2, T, d))
 nu2_trajs_pred = np.zeros((n_nu2, T, d))
 
-for i in range(n_nu1):
-    nu1_trajs_true[i,:,:] = true_trajs[nu1_indices[i], :, :]
-    nu1_trajs_pred[i,:,:] = pred_trajs[nu1_indices[i], :, :]
-for i in range(n_nu2):
-    nu2_trajs_true[i,:,:] = true_trajs[nu2_indices[i], :, :]
-    nu2_trajs_pred[i,:,:] = pred_trajs[nu2_indices[i], :, :]
+nu1_trajs_true = true_trajs[nu1_indices, :, :]
+nu1_trajs_pred = pred_trajs[nu1_indices, :, :]
+nu2_trajs_true = true_trajs[nu2_indices, :, :]
+nu2_trajs_pred = pred_trajs[nu2_indices, :, :]
+
+# save trajectories
+
+folder = dynamical_system_name + "/predict"
+os.makedirs(folder, exist_ok=True)  # creates the folder if it doesn't exist
+np.save(os.path.join(folder, "nu1_trajs_true"+ tag), nu1_trajs_true)
+np.save(os.path.join(folder, "nu1_trajs_pred"+ tag), nu1_trajs_pred)
+np.save(os.path.join(folder, "nu2_trajs_true"+ tag), nu2_trajs_true)
+np.save(os.path.join(folder, "nu2_trajs_pred"+ tag), nu2_trajs_pred)
+
 
 #%%
 num_bins = 100
 nu1 = nu1_trajs_true[:,warmup-1,:]
 nu2 = nu2_trajs_true[:,warmup-1,:]
 
-meas.plot_measure(0.01 * nu1, (0,2), num_bins, 'hist')
-
+meas.plot_measure(nu2, (0,2), num_bins, 'hist')
 #%% calculate distance between distributions for ESN trajectories
 sigma_kernel = 1
-kernel = lambda x,y: meas.rbf(x,y,sigma_kernel)
-step = 10
+
+dist_trajs_truepred_11 = meas.mmd_rbf_seq(nu1_trajs_true, nu1_trajs_pred)
+fig, ax = plt.figure(), plt.axes()
+ax.plot(dist_trajs_truepred_11)
+
+np.save(os.path.join(folder, "dist_trajs_truepred_11"+ tag), dist_trajs_truepred_11)
+plt.savefig(os.path.join(folder, "dist_trajs_truepred_11"+ tag))
+plt.close()
 
 #%%
-dist_trajs_truepred_11 = np.zeros(T-warmup)
-for t in range(warmup, T):
-    if t % step == 0:
-        nu_a_t, nu_b_t = nu1_trajs_true[:,t,:], nu1_trajs_pred[:,t,:]
-        dist_trajs_truepred_11[t-warmup] = meas.MMD(nu_a_t, nu_b_t, kernel)
-        print('time:', t)
+dist_trajs_truepred_22 = meas.mmd_rbf_seq(nu2_trajs_true, nu2_trajs_pred)
+fig, ax = plt.figure(), plt.axes()
+ax.plot(dist_trajs_truepred_22)
 
-plt.plot(dist_trajs_truepred_11)
+np.save(os.path.join(folder, "dist_trajs_truepred_22"+ tag), dist_trajs_truepred_22)
+plt.savefig(os.path.join(folder, "dist_trajs_truepred_22"+ tag))
+plt.close()
 
 #%%
-dist_trajs_truepred_22 = np.zeros(T-warmup)
-for t in range(warmup, T):
-    if t % step == 0:
-        nu_a_t, nu_b_t = nu2_trajs_true[:,t,:], nu2_trajs_pred[:,t,:]
-        dist_trajs_truepred_22[t-warmup] = meas.MMD(nu_a_t, nu_b_t, kernel)
-        print('time:', t)
+dist_trajs_truepred_12 = meas.mmd_rbf_seq(nu1_trajs_true, nu2_trajs_pred)
+fig, ax = plt.figure(), plt.axes()
+ax.plot(dist_trajs_truepred_12)
 
-plt.plot(dist_trajs_truepred_22)
+np.save(os.path.join(folder, "dist_trajs_truepred_12"+ tag), dist_trajs_truepred_12)
+plt.savefig(os.path.join(folder, "dist_trajs_truepred_12"+ tag))
+plt.close()
+
 #%%
-dist_trajs_truepred_12 = np.zeros(T-warmup)
-for t in range(warmup, T):
-    if t % step == 0:
-        nu_a_t, nu_b_t = nu1_trajs_true[:,t,:], nu2_trajs_pred[:,t,:]
-        dist_trajs_truepred_12[t-warmup] = meas.MMD(nu_a_t, nu_b_t, kernel)
-        print('time:', t)
+dist_trajs_truepred_21 = meas.mmd_rbf_seq(nu2_trajs_true, nu1_trajs_pred)
+fig, ax = plt.figure(), plt.axes()
+ax.plot(dist_trajs_truepred_21)
 
-plt.plot(dist_trajs_truepred_12)
+np.save(os.path.join(folder, "dist_trajs_truepred_21"+ tag), dist_trajs_truepred_21)
+plt.savefig(os.path.join(folder, "dist_trajs_truepred_21"+ tag))
+plt.close()
+
 #%%
-dist_trajs_truepred_21 = np.zeros(T-warmup)
-for t in range(warmup, T):
-    if t % step == 0:
-        nu_a_t, nu_b_t = nu2_trajs_true[:,t,:], nu1_trajs_pred[:,t,:]
-        dist_trajs_truepred_21[t-warmup] = meas.MMD(nu_a_t, nu_b_t, kernel)
-        print('time:', t)
+nu1 = nu1_trajs_pred[:,warmup,:]
+meas.plot_measure(nu1, (0,2), num_bins, "hist")
 
-plt.plot(dist_trajs_truepred_21)
+#%%
+nu2 = nu2_trajs_true[:,warmup,:]
+meas.plot_measure(nu2, (0,2), num_bins, "hist")
 
 #%%
 nu1 = nu1_trajs_pred[:,-1,:]
-meas.plot_measure(nu1, (0,2))
+meas.plot_measure(nu1, (0,2), num_bins, "hist")
 
 #%%
-nu2 = nu2_trajs_pred[:,-1,:]
-meas.plot_measure(nu2, (0,2))
+nu2 = nu2_trajs_true[:,-1,:]
+meas.plot_measure(nu2, (0,2), num_bins, "hist")
 
+#%%
+nu1, nu2 = np.expand_dims(nu1_trajs_true[:, warmup, :], axis=1), np.expand_dims(nu2_trajs_pred[:, warmup, :], axis=1)
+d1 = meas.mmd_rbf_seq(nu1, nu2)
+print(d1)
+
+#%%
+nu1, nu2 = np.expand_dims(nu1_trajs_true[:, -1, :], axis=1), np.expand_dims(nu2_trajs_pred[:, -1, :], axis=1)
+d2 = meas.mmd_rbf_seq(nu1, nu2)
+print(d2)
+
+#%%
+d1b, d2b = dist_trajs_truepred_12[warmup], dist_trajs_truepred_12[-1]
+print(d1b, d2b)
 #%%
 x_plot = nu1[:,0]
 y_plot = nu1[:,1]
@@ -212,7 +270,7 @@ else:
 
 #%% plot invariant measure
 
-meas.plot_measure(mu_ESN, (2,0), 100, 'hist') # kde takes long and gives strange plots, figure out how to do this better
+meas.plot_measure(mu_ESN, (1,2), 100, 'hist') # kde takes long and gives strange plots, figure out how to do this better
 
 
 #%%
@@ -227,4 +285,31 @@ ax.set_xlabel('x')
 ax.set_ylabel('y')
 ax.set_zlabel('z')
 
+#%%
+ids_off_attractor = []
+ids_on_attractor = []
+for i in range(mu_ESN.shape[0]):
+    if mu_ESN[i,2]<0:
+        ids_off_attractor.append(i)
+    else:
+        ids_on_attractor.append(i)
+print(len(ids_off_attractor))
+print(mu_ESN.shape[0])
+
+# %%
+mu_ESN_2 = mu_ESN[ids_on_attractor, :]
+meas.plot_measure(mu_ESN_2, (1,2), 100, 'hist') # kde takes long and gives strange plots, figure out how to do this better
+
+
+#%%
+x_plot = mu_ESN_2[:,0]
+y_plot = mu_ESN_2[:,1]
+z_plot = mu_ESN_2[:,2]
+
+fig = plt.figure(figsize=(15, 10))
+ax = fig.add_subplot(1,1,1, projection='3d')
+ax.scatter(x_plot, y_plot, z_plot, s = 5)
+ax.set_xlabel('x')
+ax.set_ylabel('y')
+ax.set_zlabel('z')
 # %%

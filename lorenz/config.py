@@ -69,9 +69,12 @@ config["DATA"]["l_trajectories"] = 3000
 config["DATA"]["l_trajectories_test"] = 4000
 config["DATA"]["data_type"] = torch.float64
 config["DATA"]["method"] = 'RK4'
-config["DATA"]["load_data"] = False
+config["DATA"]["load_data"] = True
+config["DATA"]["load_samples"] = True
+config["DATA"]["load_sample_dists"] = False
 config["DATA"]["normalize_data"] = True
 config["PATH"] = "lorenz/models/"
+config["FILE_NAME_TAG"] = config["MODEL"]["RC_type"] + '_ridge_' + str(config["TRAINING"]["ridge"])
 
 
 

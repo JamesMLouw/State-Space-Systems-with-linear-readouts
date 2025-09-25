@@ -20,8 +20,7 @@ if not os.path.exists(config["PATH"]):
     os.makedirs(config["PATH"])
     
 RC_type = config["MODEL"]["RC_type"]
-
-tag = RC_type + '_ridge_' + str(config["TRAINING"]["ridge"])
+tag = config["FILE_NAME_TAG"]
 
 if RC_type == 'ESN':
     Network = ESN

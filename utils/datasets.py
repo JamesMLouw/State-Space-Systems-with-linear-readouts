@@ -5,6 +5,8 @@ import torch
 import utils.dynamical_systems as dyn_sys
 from tqdm.auto import tqdm
 import os
+import utils.measures as meas
+import matplotlib.pyplot as plt
 
 lor_args = (10, 8/3, 28)
 
@@ -147,3 +149,105 @@ class Dataset:
 """
 class ParallelDataset # to be implemented
 """
+
+class Two_Sample:
+    """Time series of two samples over time"""
+    def __init__(self,
+                 mu1 : np.ndarray = None,
+                 mu2 : np.ndarray = None,
+                 load_data : bool = False,
+                 load_dist : bool = False,
+                 path : str = None,
+                 name : str = None,
+                 name1 : str = None,
+                 name2 : str = None
+                 ):
+        """
+        mu1 : (m_sample, T_seq_len, d_dim)
+        mu2 : (n_sample, T_seqe_len, d_dim)
+        """
+        self.path = path
+        self.name = name
+        self.name1 = name1
+        self.name2 = name2
+
+        if load_data:
+            self.load_data()
+        else:
+            self.mu1 = mu1
+            self.mu2 = mu2
+
+        if load_dist:
+            self.load_dist()
+        else:
+            self.dist = None
+        
+    def load_data(self):
+        print(self.path + self.name1 + '.npy')
+        self.mu1 = np.load(self.path + self.name1 + '.npy')
+        self.mu2 = np.load(self.path + self.name2 + '.npy')
+
+    def load_dist(self):
+        self.dist = np.load(self.path + self.name + '.npy')
+
+    def save_data(self):
+        np.save(self.path + self.name1, self.mu1)
+        np.save(self.path + self.name2, self.mu2)
+
+    def save_dist(self):
+        np.save(self.path + self.name, self.dist)
+
+    def plot_dists(self, plot_name):
+        fig, ax = plt.figure(), plt.axes()
+        ax.plot(self.dist)
+
+        plt.savefig(self.path + self.name + plot_name)
+        plt.close()
+    
+    def median_dist(self, n_estimate = None):
+        mu = np.concatenate([self.mu1, self.mu2], axis = 0)
+        
+        if n_estimate is not None:
+            idx = np.random.choice(mu.shape[0], n_estimate, replace = False)
+            mu = mu[idx]
+
+        xx = np.sum(mu**2, axis = -1)
+        xy = np.einsum("mtd, ntd -> mnt", mu, mu)
+        dist_sq = xx[:, None, :] + xx[None, :, :] - 2 * xy
+        dists = np.sqrt(np.maximum(dist_sq, 0.0))
+
+        mask = np.eye(mu.shape[0], dtype=bool)[:, :, None]
+        dists = np.where(mask, np.nan, dists)
+
+        medians = np.nanmedian(dists, axis=(0, 1))
+
+        return np.mean(medians)
+
+    def calculate_dist(self, 
+                       sigma = 1.0,
+                       biased = False,
+                       linear_time = False,
+                       enforce_equal = False):
+        if enforce_equal:
+            m, n = self.mu1.shape[0], self.mu2.shape[0]
+            p = min(m, n)
+            idx1 = np.random.choice(m, p, replace = False)
+            idx2 = np.random.choice(n, p, replace = False)
+
+            mu1 = self.mu1[idx1]
+            mu2 = self.mu2[idx2]
+        else:
+            mu1 = self.mu1
+            mu2 = self.mu2
+
+        print("calculating distances")
+        if linear_time:
+            self.dist = meas.mmd_rbf_seq_lin_time(mu1, mu2, sigma)
+        else:
+            self.dist = meas.mmd_rbf_seq(mu1, mu2, sigma, biased)
+        
+        plot_name = "_biased_" + str(biased) + "_linear_time_" + str(linear_time)
+        self.plot_dists(plot_name)
+        self.save_dist()
+
+        return self.dist

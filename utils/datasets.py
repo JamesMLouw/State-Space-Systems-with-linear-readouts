@@ -7,6 +7,7 @@ from tqdm.auto import tqdm
 import os
 import utils.measures as meas
 import matplotlib.pyplot as plt
+import time
 
 lor_args = (10, 8/3, 28)
 
@@ -47,6 +48,37 @@ def normalise(y):
     scale = np.array([1 /100 for _ in range(y.shape[2])]) # scale[0,0,:]
 
     return (shift_scale(y, mean, scale), mean, scale)
+
+def downsample_array(arr, n_new_sample, axis=0, seed=None, replace=False):
+    """
+    Randomly downsample a numpy array along a given axis.
+
+    Parameters
+    ----------
+    arr : np.ndarray
+        Input array of arbitrary dimension.
+    n_new_sample : int
+        Number of samples to select (must be <= arr.shape[axis] if replace=False).
+    axis : int, default=0
+        Axis along which to downsample.
+    seed : int, optional
+        Random seed for reproducibility. If None, a random generator is used.
+    replace : bool, default=False
+        Whether sampling is with replacement.
+
+    Returns
+    -------
+    np.ndarray
+        Downsampled array with shape modified along `axis`.
+    """
+    n_samples = arr.shape[axis]
+    if not replace and n_new_sample > n_samples:
+        raise ValueError("n_new_sample must be <= number of samples on the chosen axis")
+
+    rng = np.random.default_rng(seed)  # independent RNG
+    indices = rng.choice(n_samples, size=n_new_sample, replace=replace)
+
+    return np.take(arr, indices, axis=axis)
 
 class Dataset:
     """Dataset of transients obtained from a given system."""
@@ -240,6 +272,7 @@ class Two_Sample:
             mu1 = self.mu1
             mu2 = self.mu2
 
+        start_time = time.time()
         print("calculating distances")
         if linear_time:
             self.dist = meas.mmd_rbf_seq_lin_time(mu1, mu2, sigma)
@@ -249,5 +282,7 @@ class Two_Sample:
         plot_name = "_biased_" + str(biased) + "_linear_time_" + str(linear_time)
         self.plot_dists(plot_name)
         self.save_dist()
-
+        elapsed_time = time.time() - start_time
+        print(f"Time to calculate distances: {elapsed_time:.3f} seconds")
+        
         return self.dist

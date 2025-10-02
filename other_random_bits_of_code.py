@@ -248,3 +248,49 @@ meas.two_sample_test(m, alpha = 0.05, H0 = '>eps', epsilon_sq = 0.15, biased = T
 #%%
 meas.epsilon_sq_given_cut_off_two_sample_test(1000, 0.01, 0.05, '>eps', True)
 # %%
+#%% plot one trajectory of the true and predicted
+predictions, _ = model.integrate(
+        torch.tensor(dataset_test.input_data[:2, :warmup, :], dtype=torch.get_default_dtype()).to(model.device),
+        T=T_end - warmup,
+    )
+true_traj = dataset_test.input_data[0,:,:]
+pred_traj = predictions[0,:,:].detach().cpu().numpy()
+time_steps = dataset_test.tt[:-1]
+
+coords = ['x', 'y', 'z']
+warmup_time = warmup * step
+t_end = T_end * step
+x_lim = (0,t_end)
+
+fig, axes = plt.subplots(3, 1, figsize=(10, 8), sharex=True)
+
+for i, ax in enumerate(axes):
+    ax.plot(time_steps, true_traj[:, i], label="True")
+    ax.plot(time_steps, pred_traj[:, i], label="Predicted")
+    ax.axvline(warmup_time, linestyle=":", label="Warmup" if i == 0 else None)
+
+    ax.set_xlim(x_lim)
+    ax.set_ylabel(coords[i])
+    if i == 0:
+        ax.legend(loc="upper right")
+
+axes[-1].set_xlabel("time")
+fig.suptitle("Prediction for one trajectory")
+fig.tight_layout(rect=[0, 0, 1, 0.96])  # leave space for suptitle
+
+plt.savefig('Prediction_one_trajectory.png', dpi=300)
+plt.show()
+plt.close(fig)
+
+#%%
+x_plot = mu_ESN[:,0]
+y_plot = mu_ESN[:,1]
+z_plot = mu_ESN[:,2]
+
+fig = plt.figure(figsize=(15, 10))
+ax = fig.add_subplot(1,1,1, projection='3d')
+ax.scatter(x_plot, y_plot, z_plot, s = 5)
+ax.set_xlabel('x')
+ax.set_ylabel('y')
+ax.set_zlabel('z')
+

@@ -22,7 +22,7 @@ def invariant_measure(phi, n_points, t_start, t_end, y0, sd, distribution = "uni
 
 # def pushforward(phi, measure, t=1):
 
-def plot_measure(measure, axes = (0,1), num_bins = None, plot_type = 'kde'):
+def plot_measure(measure, axes = (0,1), num_bins = 100, plot_type = 'kde'):
     if len(measure.shape) == 2:
         measure = measure.reshape((1,measure.shape[0], measure.shape[1]))
     
@@ -344,7 +344,7 @@ def epsilon_sq_given_cut_off_two_sample_test(m, z_sq, alpha = 0.05,  H0 = '>eps'
             assert 'invalid null hypothesis H0'
         
     return epsilon_sq
-6
+
 # #%%
 # import matplotlib.pyplot as plt
 

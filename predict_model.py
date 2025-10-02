@@ -248,12 +248,12 @@ hline2 = meas.two_sample_test(m, alpha = 0.05, H0 = '>eps', epsilon_sq = epsilon
 plt.figure(figsize=(8, 6))
 
 # Plot time series
-plt.plot(time, dists_11, label="MMD between $\mu_1$ and $\mu_2$ transported under Lorenz")
-plt.plot(time, dists_12, label="MMD between $\mu_1$ transported under Lorenz and proxy")
+plt.plot(time, dists_12, label="MMD between $\mu_1$ and $\mu_2$ transported under Lorenz")
+plt.plot(time, dists_11, label="MMD between $\mu_1$ transported under Lorenz and proxy")
 
 plt.axvline(x=warmup * step, color="black", linestyle="--")
 plt.axhline(y=hline1, linestyle=":", label=f"Crit val $H_0: \mu_1 = \mu_2$") 
-plt.axhline(y=hline2, linestyle=":", label=f"Crit val $H_0: MMD(\mu_1, \mu_2)^2>{epsilon_sq}$")
+plt.axhline(y=hline2, linestyle=":", label=f"Crit val $H_0: MMD(\mu_1, \mu_2)^2>{epsilon_sq}$", color='red')
 
 plt.yscale("log")
 plt.xlabel("Time")

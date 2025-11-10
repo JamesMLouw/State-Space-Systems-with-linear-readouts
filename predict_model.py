@@ -248,18 +248,18 @@ hline2 = meas.two_sample_test(m, alpha = 0.05, H0 = '>eps', epsilon_sq = epsilon
 plt.figure(figsize=(8, 6))
 
 # Plot time series
-plt.plot(time, dists_12, label="MMD between $\mu_1$ and $\mu_2$ transported under Lorenz")
-plt.plot(time, dists_11, label="MMD between $\mu_1$ transported under Lorenz and proxy")
+plt.plot(time, dists_12, label="MMD$^2$ between $\mu_a$ and $\mu_b$ transported under Lorenz")
+plt.plot(time, dists_11, label="MMD$^2$ between $\mu_a$ transported under Lorenz and proxy")
 
 plt.axvline(x=warmup * step, color="black", linestyle="--")
-plt.axhline(y=hline1, linestyle=":", label=f"Crit val $H_0: \mu_1 = \mu_2$") 
-plt.axhline(y=hline2, linestyle=":", label=f"Crit val $H_0: MMD(\mu_1, \mu_2)^2>{epsilon_sq}$", color='red')
+plt.axhline(y=hline1, linestyle=":", label=f"Crit val $H_0: \mu_a = \mu_b$") 
+plt.axhline(y=hline2, linestyle=":", label=f"Crit val $H_0: MMD(\mu_a, \mu_b)^2>{epsilon_sq}$", color='red')
 
 plt.yscale("log")
 plt.xlabel("Time")
-plt.ylabel("MMD")
+plt.ylabel("MMD$^2$")
 
-plt.xlim(0, time[-1]) 
+plt.xlim(0, 80) 
 plt.ylim(0, 1e0)
 
 plt.legend()
@@ -428,6 +428,44 @@ plt.tight_layout(rect=[0, 0, 1, 0.95])
 fig_path = os.path.join(figures_folder, 'invariant_measures.png')
 plt.savefig(fig_path, dpi=300, bbox_inches="tight")
 plt.show()
+
+#%% calculate distance between trajectories
+
+# true and predicted first trajectory
+traj_1, traj_2 = samples_11.mu1[0], samples_11.mu2[0]
+diff_traj = traj_1 - traj_2
+dist_trajs_truepred = np.linalg.norm(diff_traj, axis=1)
+
+# comparing two trajectories under the true system
+traj_1, traj_2 = samples_12.mu1[0], samples_12.mu2[0]
+diff_traj = traj_1 - traj_2
+dist_trajs_truetrue = np.linalg.norm(diff_traj, axis=1)
+
+time = dataset_test.tt[:-1]
+
+plt.figure(figsize=(8, 5))
+
+plt.plot(time, dist_trajs_truetrue, label="distance between $m_a$ and $m_b$ transported under Lorenz")
+plt.plot(time, dist_trajs_truepred, label="distance between $m_a$ transported under Lorenz and proxy")
+
+plt.yscale("log")
+plt.xlim(0, 80)       # example x range
+plt.ylim(0, 1)     # example y range; adjust to your data
+
+plt.xlabel("Time")
+plt.ylabel("Distance")
+# plt.title("Trajectory Distance Comparison", fontsize=14)
+
+plt.axvline(x=step * warmup, color="black", linestyle="--")
+
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+fig_path = os.path.join(figures_folder, 'Trajectories distance figure.png')
+plt.savefig(fig_path, dpi=300)
+plt.show()
+
 
 
 ###############################################################################

@@ -236,7 +236,7 @@ else:
 # #%%
 # import importlib
 # importlib.reload(meas)
-#%% plot the two distributions against each other
+#%% plot the MMD between the distributions against each other
 
 m = samples_12.mu1.shape[0]
 print(f"sample size is {m}")
@@ -250,19 +250,57 @@ print(f"test >eps crit val{hline2}")
 plt.figure(figsize=(8, 6))
 
 # Plot time series
-plt.plot(time, dists_12, label="MMD$^2$ between $\mu_a$ and $\mu_b$ transported under Lorenz")
-plt.plot(time, dists_11, label="MMD$^2$ between $\mu_a$ transported under Lorenz and proxy")
+plt.plot(time, dists_12, label=r"MMD$^2$ between $\mu^1_{\tau}$ and $\mu^2_{\tau}$")
+plt.plot(time, dists_11, label=r"MMD$^2$ between $\mu^1_{\tau}$ and $\hat{\mu}^1_{\tau}$")
 
 plt.axvline(x=warmup * step, color="black", linestyle="--")
-plt.axhline(y=hline1, linestyle=":", label=f"Crit val $H_0: \mu_a = \mu_b$") 
-plt.axhline(y=hline2, linestyle=":", label=f"Crit val $H_0: MMD(\mu_a, \mu_b)^2>{epsilon_sq}$", color='red')
+plt.axhline(y=hline1, linestyle=":", label=f"Crit val $H_0: \mu^a = \mu^b$") 
+plt.axhline(y=hline2, linestyle=":", label=f"Crit val $H_0: MMD(\mu^a, \mu^b)^2>{epsilon_sq}$", color='red')
 
 plt.yscale("log")
-plt.xlabel("Time")
+plt.xlabel(r"Time $\tau$")
 plt.ylabel("MMD$^2$")
 
 plt.xlim(0, 80) 
 plt.ylim(0, 1e0)
+
+plt.legend()
+fig_path = os.path.join(figures_folder, 'MMD transport figure.png')
+plt.savefig(fig_path, dpi=300)
+plt.show()
+
+#%% plot the p_vals for the distributions against each other
+
+import importlib
+importlib.reload(meas)
+
+#%%
+m = samples_12.mu1.shape[0]
+print(f"sample size is {m}")
+epsilon_sq = 0.1
+time = dataset_test.tt[:-1]
+
+pvals_12_eq = meas.p_val_two_sample_test(m, dists_12, epsilon_sq, H0 = '==', biased = True)
+pvals_12_uneq = meas.p_val_two_sample_test(m, dists_12, epsilon_sq, H0 = '>eps', biased = True)
+pvals_11_eq = meas.p_val_two_sample_test(m, dists_11, epsilon_sq, H0 = '==', biased = True)
+pvals_11_uneq = meas.p_val_two_sample_test(m, dists_11, epsilon_sq, H0 = '>eps', biased = True)
+
+plt.figure(figsize=(8, 6))
+
+# Plot time series
+plt.plot(time, pvals_12_eq, label=r"p-value H$_0: \mu^1_{\tau} = \mu^2_{\tau}$")
+plt.plot(time, pvals_12_uneq, label=r"p-value H$_0: MMD(\mu^1_{\tau},\mu^2_{\tau})^2>$"+str(epsilon_sq))
+plt.plot(time, pvals_11_eq, label=r"p-value H$_0: \mu^1_{\tau} = \hat{\mu}^1_{\tau}$")
+plt.plot(time, pvals_11_uneq, label=r"p-value H$_0: MMD(\mu^1_{\tau},\hat{\mu}^1_{\tau})^2>$"+str(epsilon_sq))
+
+plt.axvline(x=warmup * step, color="black", linestyle="--")
+
+plt.yscale("log")
+plt.xlabel("Time")
+plt.ylabel("p-value")
+
+plt.xlim(0, 80) 
+plt.ylim(1e-1, 1e0)
 
 plt.legend()
 fig_path = os.path.join(figures_folder, 'MMD transport figure.png')
@@ -366,7 +404,12 @@ mu5 = 100 * samples_12.mu2[: , -1, indices_plot]
 mu6 = 100 * samples_11.mu2[:, -1, indices_plot]
 
 datasets = [mu2, mu1, mu3, mu5, mu4, mu6]
-titles   = [f"$\mu^2_t$ at t={warmup * step}", f"$\mu^1_t$ at t={warmup * step}", r"$\hat{\mu}^1_t$ at " + f"t={T_end * step}", f"$\mu^2_t$ at t={T_end * step}", f"$\mu^1_t$ at t={T_end * step}", r"$\hat{\mu}^1_t$ at" + f" t={T_end * step}"]
+titles   = [r"$\mu^2_\tau$ at $\tau$=" + f"{warmup * step}",
+            r"$\mu^1_\tau$ at $\tau$=" + f"{warmup * step}",
+            r"$\hat{\mu}^1_\tau$ at $\tau$="+ f"{warmup * step}",
+            r"$\mu^2_{\tau}$ at $\tau$=" + f"{T_end * step}",
+            r"$\mu^1_\tau$ at $\tau$=" + f"{T_end * step}",
+            r"$\hat{\mu}^1_\tau$ at $\tau$="+f"{T_end * step}"]
 
 xlim = (-20, 20)
 ylim = (0, 50)
@@ -534,14 +577,14 @@ time = dataset_test.tt[:-1]
 
 plt.figure(figsize=(8, 5))
 
-plt.plot(time, dist_trajs_truetrue, label="mean distance between $m_a$ and $m_b$ transported under Lorenz")
-plt.plot(time, dist_trajs_truepred, label="mean distance between $m_a$ transported under Lorenz and proxy")
+plt.plot(time, dist_trajs_truetrue, label=r"mean distance between $\mu^1_{\tau}$ and $\mu^2_{\tau}$")
+plt.plot(time, dist_trajs_truepred, label=r"mean distance between $\mu^1_{\tau}$ and $\hat{\mu}^1_{\tau}$")
 
 plt.yscale("log")
 plt.xlim(0, 80)       # example x range
 plt.ylim(0, 1)     # example y range; adjust to your data
 
-plt.xlabel("Time")
+plt.xlabel(r"Time $\tau$")
 plt.ylabel("Distance")
 # plt.title("Trajectory Distance Comparison", fontsize=14)
 

@@ -366,13 +366,13 @@ def p_val_two_sample_test(m, z_sq, epsilon_sq = 0.1,  H0 = '>eps', biased = True
         eps = np.sqrt(epsilon_sq)
         if H0 == '>eps':
             delta = eps - z - 4 * np.sqrt(K/m)
-            if delta < 0:
-                assert 'negative delta'
+            # if delta < 0:
+            #     assert 'negative delta'
             p_val = 2 * np.exp( - delta**2 * m / (4 * K))
         elif H0 == '==':
             delta = z - np.sqrt(2*K / m)
-            if delta < 0:
-                assert 'negative delta'
+            # if delta < 0:
+            #     assert 'negative delta'
             p_val = np.exp( - delta**2 * m / (4 * K))
         else:
             assert 'invalid null hypothesis H0'

@@ -179,7 +179,7 @@ fig.tight_layout(rect=[0, 0, 1, 0.96])  # leave space for suptitle
 
 figures_folder = folder + '/fig'
 os.makedirs(figures_folder, exist_ok=True)
-fig_path = os.path.join(figures_folder, 'Prediction_one_trajectory.png')
+fig_path = os.path.join(figures_folder, 'Prediction_one_trajectory.pdf')
 plt.savefig(fig_path, dpi=300)
 plt.show()
 plt.close(fig)
@@ -266,7 +266,7 @@ plt.ylim(0, 1e0)
 plt.tight_layout()
 
 plt.legend()
-fig_path = os.path.join(figures_folder, 'MMD transport figure.png')
+fig_path = os.path.join(figures_folder, 'MMD transport figure.pdf')
 plt.savefig(fig_path, dpi=300)
 plt.show()
 
@@ -304,7 +304,7 @@ plt.xlim(0, 80)
 plt.ylim(1e-1, 1e0)
 
 plt.legend()
-fig_path = os.path.join(figures_folder, 'MMD transport figure.png')
+fig_path = os.path.join(figures_folder, 'MMD transport figure.pdf')
 plt.savefig(fig_path, dpi=300)
 plt.show()
 
@@ -348,7 +348,7 @@ fig.suptitle("Densities", fontsize=16)
 plt.tight_layout(rect=[0, 0, 1, 0.95])
 
 # Save the figure
-fig_path = os.path.join(figures_folder, 'densities_truetrue.png')
+fig_path = os.path.join(figures_folder, 'densities_truetrue.pdf')
 plt.savefig(fig_path, dpi=300, bbox_inches="tight")
 plt.show()
 
@@ -391,7 +391,7 @@ fig.suptitle("Densities", fontsize=16)
 plt.tight_layout(rect=[0, 0, 1, 0.95])
 
 # Save the figure
-fig_path = os.path.join(figures_folder, 'densities_truepred.png')
+fig_path = os.path.join(figures_folder, 'densities_truepred.pdf')
 plt.savefig(fig_path, dpi=300, bbox_inches="tight")
 plt.show()
 
@@ -445,7 +445,7 @@ fig.text(0.74, 0.97, "(c)", ha="center", va="center", fontsize=14)
 plt.tight_layout(rect=[0, 0, 1, 0.95])
 
 # Save the figure
-fig_path = os.path.join(figures_folder, 'densities_truetruepred.png')
+fig_path = os.path.join(figures_folder, 'densities_truetruepred.pdf')
 plt.savefig(fig_path, dpi=300, bbox_inches="tight")
 plt.show()
 
@@ -520,7 +520,7 @@ fig.suptitle("Invariant measures", fontsize=16)
 plt.tight_layout(rect=[0, 0, 1, 0.95])
 
 # Save the figure
-fig_path = os.path.join(figures_folder, 'invariant_measures.png')
+fig_path = os.path.join(figures_folder, 'invariant_measures.pdf')
 plt.savefig(fig_path, dpi=300, bbox_inches="tight")
 plt.show()
 
@@ -556,7 +556,7 @@ plt.axvline(x=step * warmup, color="black", linestyle="--")
 plt.legend()
 plt.tight_layout()
 
-fig_path = os.path.join(figures_folder, 'Trajectories distance figure.png')
+fig_path = os.path.join(figures_folder, 'Trajectories distance figure.pdf')
 plt.savefig(fig_path, dpi=300)
 plt.show()
 
@@ -594,6 +594,8 @@ plt.axvline(x=step * warmup, color="black", linestyle="--")
 plt.legend()
 plt.tight_layout()
 
-fig_path = os.path.join(figures_folder, 'Trajectories mean distance figure.png')
+fig_path = os.path.join(figures_folder, 'Trajectories mean distance figure.pdf')
 plt.savefig(fig_path, dpi=300)
 plt.show()
+
+# %%

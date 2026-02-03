@@ -8,17 +8,19 @@ SOURCE
 ------
 Code base comes from https://github.com/Learning-of-Dynamic-Processes/coldstart.git
 "Data-driven cold starting of good reservoirs"
-L. Grigoryeva et al., (2023).
-*ArXiv* arXiv:2403.10325 
-(https://arxiv.org/abs/2403.10325)
+L. Grigoryeva et al., (2024).
+Physica D: Nonlinear Phenomena
+doi: https://doi.org/10.1016/j.physd.2024.134325
+url: https://www.sciencedirect.com/science/article/pii/S0167278924002768
 
 INSTALLATION
 ---------
 
 
-Clone repository and install dependencies
+Clone repository
 
     git clone https://github.com/Learning-of-Dynamic-Processes/Learning-the-climate-with-state-space-systems.git
+
 
 USAGE
 ---------

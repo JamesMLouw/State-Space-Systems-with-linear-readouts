@@ -21,6 +21,28 @@ Clone repository
 
     git clone https://github.com/Learning-of-Dynamic-Processes/Learning-the-climate-with-state-space-systems.git
 
+## UV
+
+``` 
+uv sync
+```
+
+```
+uv run <filename>.py
+```
+
+## PIP
+
+(Windows)
+
+```
+python -m venv .venv ; .venv\Scripts\activate.bat ; python -m pip install -e .
+```
+(Linux / Mac)
+```
+python -m venv .venv ; source .venv/bin/activate ; python -m pip install -e .
+```
+
 
 USAGE
 ---------

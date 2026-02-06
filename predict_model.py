@@ -304,7 +304,7 @@ plt.xlim(0, 80)
 plt.ylim(1e-1, 1e0)
 
 plt.legend()
-fig_path = os.path.join(figures_folder, 'MMD transport figure.pdf')
+fig_path = os.path.join(figures_folder, 'MMD transport figure_2.pdf')
 plt.savefig(fig_path, dpi=300)
 plt.show()
 
@@ -424,7 +424,7 @@ axes = [fig.add_subplot(gs[0,0]), fig.add_subplot(gs[0,1]), fig.add_subplot(gs[0
 for i, (data, ax) in enumerate(zip(datasets, axes)):
     x = data[:, 0]
     y = data[:, 1]
-    h = ax.hist2d(x, y, bins=100, range=[xlim, ylim], cmap="viridis")
+    h = ax.hist2d(x, y, bins=100, range=[xlim, ylim], cmap="magma_r")
     
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)

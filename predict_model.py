@@ -332,7 +332,7 @@ axes = [fig.add_subplot(gs[0,0]), fig.add_subplot(gs[0,1]),
 for i, (data, ax) in enumerate(zip(datasets, axes)):
     x = data[:, 0]
     y = data[:, 1]
-    h = ax.hist2d(x, y, bins=100, range=[xlim, ylim], cmap="viridis")
+    h = ax.hist2d(x, y, bins=100, range=[xlim, ylim], cmap="magma_r")
     
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
@@ -375,7 +375,7 @@ axes = [fig.add_subplot(gs[0,0]), fig.add_subplot(gs[0,1]),
 for i, (data, ax) in enumerate(zip(datasets, axes)):
     x = data[:, 0]
     y = data[:, 1]
-    h = ax.hist2d(x, y, bins=100, range=[xlim, ylim], cmap="viridis")
+    h = ax.hist2d(x, y, bins=100, range=[xlim, ylim], cmap="magma_r")
     
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
@@ -418,13 +418,16 @@ ylim = (0, 50)
 fig = plt.figure(figsize=(10, 8))
 gs = gridspec.GridSpec(2, 4, width_ratios=[1, 1, 1, 0.05])
 
+cmap = plt.cm.magma_r
+cmap.set_under("white")
+
 axes = [fig.add_subplot(gs[0,0]), fig.add_subplot(gs[0,1]), fig.add_subplot(gs[0,2]),
         fig.add_subplot(gs[1,0]), fig.add_subplot(gs[1,1]), fig.add_subplot(gs[1,2])]
 
 for i, (data, ax) in enumerate(zip(datasets, axes)):
     x = data[:, 0]
     y = data[:, 1]
-    h = ax.hist2d(x, y, bins=100, range=[xlim, ylim], cmap="magma_r")
+    h = ax.hist2d(x, y, bins=50, range=[xlim, ylim], cmap=cmap, vmin=0.1)
     
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
@@ -445,7 +448,7 @@ fig.text(0.74, 0.97, "(c)", ha="center", va="center", fontsize=14)
 plt.tight_layout(rect=[0, 0, 1, 0.95])
 
 # Save the figure
-fig_path = os.path.join(figures_folder, 'densities_truetruepred.pdf')
+fig_path = os.path.join(figures_folder, 'densities_truetruepred_2.pdf')
 plt.savefig(fig_path, dpi=300, bbox_inches="tight")
 plt.show()
 

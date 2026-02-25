@@ -1,7 +1,8 @@
 [project]
-name = "state_space_sys_trans"
+name = "learning_the_climate_with_state_space_systems"
 description = "."
 version = "0.1"
+requires-python = ">=3.12"
 
 dependencies = [
     "matplotlib==3.8.3",

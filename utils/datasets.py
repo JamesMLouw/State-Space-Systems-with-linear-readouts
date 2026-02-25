@@ -5,6 +5,9 @@ import torch
 import utils.dynamical_systems as dyn_sys
 from tqdm.auto import tqdm
 import os
+import utils.measures as meas
+import matplotlib.pyplot as plt
+import time
 
 lor_args = (10, 8/3, 28)
 
@@ -36,15 +39,46 @@ def normalise(y):
     y : (batch, seq_length, n_dim)
     """
     mean = y.mean(axis=(0,1), keepdims=True)
-    centered = y - mean
+    centered = y # - mean
 
     max_abs = np.max(np.abs(centered), axis=(0,1), keepdims=True)
-    scale = 1.0 / (5.0 * max_abs)
+    scale = 1.0 / 100 # (5.0 * max_abs)
 
-    mean = mean[0,0,:]
-    scale = scale[0,0,:]
+    mean = np.zeros(y.shape[2]) # mean[0,0,:]
+    scale = np.array([1 /100 for _ in range(y.shape[2])]) # scale[0,0,:]
 
     return (shift_scale(y, mean, scale), mean, scale)
+
+def downsample_array(arr, n_new_sample, axis=0, seed=None, replace=False):
+    """
+    Randomly downsample a numpy array along a given axis.
+
+    Parameters
+    ----------
+    arr : np.ndarray
+        Input array of arbitrary dimension.
+    n_new_sample : int
+        Number of samples to select (must be <= arr.shape[axis] if replace=False).
+    axis : int, default=0
+        Axis along which to downsample.
+    seed : int, optional
+        Random seed for reproducibility. If None, a random generator is used.
+    replace : bool, default=False
+        Whether sampling is with replacement.
+
+    Returns
+    -------
+    np.ndarray
+        Downsampled array with shape modified along `axis`.
+    """
+    n_samples = arr.shape[axis]
+    if not replace and n_new_sample > n_samples:
+        raise ValueError("n_new_sample must be <= number of samples on the chosen axis")
+
+    rng = np.random.default_rng(seed)  # independent RNG
+    indices = rng.choice(n_samples, size=n_new_sample, replace=replace)
+
+    return np.take(arr, indices, axis=axis)
 
 class Dataset:
     """Dataset of transients obtained from a given system."""
@@ -147,3 +181,108 @@ class Dataset:
 """
 class ParallelDataset # to be implemented
 """
+
+class Two_Sample:
+    """Time series of two samples over time"""
+    def __init__(self,
+                 mu1 : np.ndarray = None,
+                 mu2 : np.ndarray = None,
+                 load_data : bool = False,
+                 load_dist : bool = False,
+                 path : str = None,
+                 name : str = None,
+                 name1 : str = None,
+                 name2 : str = None
+                 ):
+        """
+        mu1 : (m_sample, T_seq_len, d_dim)
+        mu2 : (n_sample, T_seqe_len, d_dim)
+        """
+        self.path = path
+        self.name = name
+        self.name1 = name1
+        self.name2 = name2
+
+        if load_data:
+            self.load_data()
+        else:
+            self.mu1 = mu1
+            self.mu2 = mu2
+
+        if load_dist:
+            self.load_dist()
+        else:
+            self.dist = None
+        
+    def load_data(self):
+        print(self.path + self.name1 + '.npy')
+        self.mu1 = np.load(self.path + self.name1 + '.npy')
+        self.mu2 = np.load(self.path + self.name2 + '.npy')
+
+    def load_dist(self):
+        self.dist = np.load(self.path + self.name + '.npy')
+
+    def save_data(self):
+        np.save(self.path + self.name1, self.mu1)
+        np.save(self.path + self.name2, self.mu2)
+
+    def save_dist(self):
+        np.save(self.path + self.name, self.dist)
+
+    def plot_dists(self, plot_name):
+        fig, ax = plt.figure(), plt.axes()
+        ax.plot(self.dist)
+
+        plt.savefig(self.path + self.name + plot_name)
+        plt.close()
+    
+    def median_dist(self, n_estimate = None):
+        mu = np.concatenate([self.mu1, self.mu2], axis = 0)
+        
+        if n_estimate is not None:
+            idx = np.random.choice(mu.shape[0], n_estimate, replace = False)
+            mu = mu[idx]
+
+        xx = np.sum(mu**2, axis = -1)
+        xy = np.einsum("mtd, ntd -> mnt", mu, mu)
+        dist_sq = xx[:, None, :] + xx[None, :, :] - 2 * xy
+        dists = np.sqrt(np.maximum(dist_sq, 0.0))
+
+        mask = np.eye(mu.shape[0], dtype=bool)[:, :, None]
+        dists = np.where(mask, np.nan, dists)
+
+        medians = np.nanmedian(dists, axis=(0, 1))
+
+        return np.mean(medians)
+
+    def calculate_dist(self, 
+                       sigma = 1.0,
+                       biased = False,
+                       linear_time = False,
+                       enforce_equal = False):
+        if enforce_equal:
+            m, n = self.mu1.shape[0], self.mu2.shape[0]
+            p = min(m, n)
+            idx1 = np.random.choice(m, p, replace = False)
+            idx2 = np.random.choice(n, p, replace = False)
+
+            mu1 = self.mu1[idx1]
+            mu2 = self.mu2[idx2]
+        else:
+            mu1 = self.mu1
+            mu2 = self.mu2
+
+        start_time = time.time()
+        print("calculating distances")
+        if linear_time:
+            self.dist = meas.mmd_rbf_seq_lin_time(mu1, mu2, sigma)
+        else:
+            self.dist = meas.mmd_rbf_seq(mu1, mu2, sigma, biased)
+        
+        plot_name = "_biased_" + str(biased) + "_linear_time_" + str(linear_time)
+        self.plot_dists(plot_name)
+        self.save_dist()
+        elapsed_time = time.time() - start_time
+        print(f"Time to calculate distances: {elapsed_time:.3f} seconds")
+        
+        return self.dist

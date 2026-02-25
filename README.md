@@ -1,8 +1,3 @@
-# Learning the climate of dynamical systems with state-space systems
-"Learning the climate of dynamical systems with state-space systems"
-J. Louw, and J.P. Ortega
-*Arxiv* arXiv:2512.15530
-(https://arxiv.org/abs/2512.15530)
 
 SOURCE
 ------

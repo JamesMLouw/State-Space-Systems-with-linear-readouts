@@ -80,6 +80,9 @@ def downsample_array(arr, n_new_sample, axis=0, seed=None, replace=False):
 
     return np.take(arr, indices, axis=axis)
 
+def f1(x):
+    x[0]
+
 class Dataset:
     """Dataset of transients obtained from a given system."""
 
@@ -89,6 +92,8 @@ class Dataset:
                  step : float = 1,
                  dynamical_system_name : str = 'lorenz', 
                  parameters = lor_args, 
+                 observations_in = f1,
+                 observations_out = f1,
                  initial_points_mean : np.ndarray = None, 
                  initial_points_sd : float = 1, 
                  data_type = torch.float64,
@@ -135,8 +140,9 @@ class Dataset:
             init_conds = dyn_sys.generate_points(num_trajectories, initial_points_mean, initial_points_sd)
             trajectories = ds.integrate(init_conds, len_trajectories + 1)
 
-            self.input_data = trajectories[:, :-1, :] # (num_trajectories, len_trajectories, n_dim)
-            self.output_data = trajectories[:, 1:, :] # (num_trajectories, len_trajectories, n_dim)
+            self.dyn_sys_states = trajectories
+            self.input_data = observations_in(trajectories[:, :-1, :]) # (num_trajectories, len_trajectories, n_dim_in)
+            self.output_data = observations_out(trajectories[:, 1:, :]) # (num_trajectories, len_trajectories, n_dim_out)
             self.tt = time_array # (len_trajectories)
 
             if normalize_data:
@@ -151,6 +157,7 @@ class Dataset:
             os.makedirs(folder, exist_ok=True)  # creates the folder if it doesn't exist
 
             np.save(os.path.join(folder, "time_array.npy"), self.tt)
+            np.save(os.path.join(folder, "dyn_sys_states.npy"), self.dyn_sys_states)
             np.save(os.path.join(folder, "input_data.npy"), self.input_data)
             np.save(os.path.join(folder, "output_data.npy"), self.output_data)
             np.save(os.path.join(folder, "shift_scale.npy"), (self.shift, self.scale))

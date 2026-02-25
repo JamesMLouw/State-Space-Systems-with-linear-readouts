@@ -11,7 +11,7 @@ config["DATA"] = {}
 config["MODEL"]["RC_type"] = "ESN"
 config["TRAINING"]["ridge"] = True
 
-config["MODEL"]["input_size"] = 3
+config["MODEL"]["input_size"] = 1
 
 if config["TRAINING"]["ridge"]:
     config["MODEL"]["hidden_size"] = []
@@ -62,16 +62,16 @@ config["DATA"]["max_warmup"] = 1000
 config["DATA"]["step"] = 0.02
 config["DATA"]["y0"] = np.array([0,0,27]).astype(np.float64)
 config["DATA"]["initial_points_sd"] = 20
-config["DATA"]["n_train"] = 100
+config["DATA"]["n_train"] = 1000
 config["DATA"]["n_val"] = 30
 config["DATA"]["n_test"] = 2200
 config["DATA"]["l_trajectories"] = 3000
 config["DATA"]["l_trajectories_test"] = 4000
 config["DATA"]["data_type"] = torch.float64
 config["DATA"]["method"] = 'RK4'
-config["DATA"]["load_data"] = True
-config["DATA"]["load_samples"] = True
-config["DATA"]["load_sample_dists"] = True
+config["DATA"]["load_data"] = False
+config["DATA"]["load_samples"] = False
+config["DATA"]["load_sample_dists"] = False
 config["DATA"]["normalize_data"] = True
 config["PATH"] = "lorenz/models/"
 config["FILE_NAME_TAG"] = config["MODEL"]["RC_type"] + '_ridge_' + str(config["TRAINING"]["ridge"])

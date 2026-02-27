@@ -114,4 +114,12 @@ class lorenz(DS_dudt):
                                  n_dim = 3,
                                  step = step,
                                  method = method)
+        
+def obs_coord(y, coord):
+    """
+    y : (batch, traj_len, n_dim)
+    coord : integer between 0 and n_dim-1
+    """
+    z = y[:, :, coord]
+    return z[:, :, np.newaxis]
     

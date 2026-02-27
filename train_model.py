@@ -38,6 +38,8 @@ dataset_train = Dataset(
     step = config["DATA"]["step"], 
     dynamical_system_name = config["DATA"]["dynamical_system_name"],
     parameters = config["DATA"]["parameters"],
+    observations_in = config["DATA"]["observations_in"],
+    observations_out = config["DATA"]["observations_out"],
     initial_points_mean = config["DATA"]["y0"], 
     initial_points_sd = config["DATA"]["initial_points_sd"],
     data_type = config["DATA"]["data_type"],
@@ -46,7 +48,8 @@ dataset_train = Dataset(
     data_set_name = 'train',
     normalize_data = config["DATA"]["normalize_data"]
 )
-shift, scale = dataset_train.shift, dataset_train.scale
+shift_in, scale_in = dataset_train.shift_in, dataset_train.scale_in
+shift_out, scale_out = dataset_train.shift_out, dataset_train.scale_out
 dataset_train.save_data()
 
 #%%
@@ -56,6 +59,8 @@ dataset_val = Dataset(
     step = config["DATA"]["step"], 
     dynamical_system_name = config["DATA"]["dynamical_system_name"],
     parameters = config["DATA"]["parameters"],
+    observations_in = config["DATA"]["observations_in"],
+    observations_out = config["DATA"]["observations_out"],
     initial_points_mean = config["DATA"]["y0"], 
     initial_points_sd = config["DATA"]["initial_points_sd"],
     data_type = config["DATA"]["data_type"],
@@ -63,8 +68,10 @@ dataset_val = Dataset(
     load_data = config["DATA"]["load_data"], 
     data_set_name = 'validate',
     normalize_data = config["DATA"]["normalize_data"],
-    shift = shift,
-    scale = scale
+    shift_in = shift_in,
+    scale_in = scale_in,
+    shift_out = shift_out,
+    scale_out = scale_out
 )
 dataset_val.save_data()
 
@@ -75,6 +82,8 @@ dataset_test = Dataset(
     step = config["DATA"]["step"], 
     dynamical_system_name = config["DATA"]["dynamical_system_name"],
     parameters = config["DATA"]["parameters"],
+    observations_in = config["DATA"]["observations_in"],
+    observations_out = config["DATA"]["observations_out"],
     initial_points_mean = config["DATA"]["y0"], 
     initial_points_sd = config["DATA"]["initial_points_sd"],
     data_type = config["DATA"]["data_type"],
@@ -82,8 +91,10 @@ dataset_test = Dataset(
     load_data = config["DATA"]["load_data"], 
     data_set_name = 'test',
     normalize_data = config["DATA"]["normalize_data"],
-    shift = shift,
-    scale = scale
+    shift_in = shift_in,
+    scale_in = scale_in,
+    shift_out = shift_out,
+    scale_out = scale_out
 )
 dataset_test.save_data()
 
@@ -92,15 +103,17 @@ dataset_test.save_data()
 fig = plt.figure()
 ax = fig.add_subplot(111)
 ax.plot(dataset_train.tt[:-1], dataset_train.input_data[0][:, 0], label="u")
-ax.plot(dataset_train.tt[:-1], dataset_train.input_data[0][:, 1], label="v")
-ax.plot(dataset_train.tt[:-1], dataset_train.input_data[0][:, 2], label="w")
+# ax.plot(dataset_train.tt[:-1], dataset_train.input_data[0][:, 1], label="v")
+# ax.plot(dataset_train.tt[:-1], dataset_train.input_data[0][:, 2], label="w")
 ax.set_xlabel("t")
 plt.legend()
 
 folder = dynamical_system_name + "/fig"
 os.makedirs(folder, exist_ok=True)  # creates the folder if it doesn't exist
 
-plt.savefig(os.path.join(folder, "data.png"))
+plt.savefig(os.path.join(folder, "data.pdf"), bbox_inches="tight")
+plt.show()
+
 plt.close()
 
 #%%

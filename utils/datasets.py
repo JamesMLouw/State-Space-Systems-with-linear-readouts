@@ -39,13 +39,13 @@ def normalise(y):
     y : (batch, seq_length, n_dim)
     """
     mean = y.mean(axis=(0,1), keepdims=True)
-    centered = y # - mean
+    centered = y - mean
 
     max_abs = np.max(np.abs(centered), axis=(0,1), keepdims=True)
-    scale = 1.0 / 100 # (5.0 * max_abs)
+    scale = 1/ (10 * max_abs) #  1.0 / 100 
 
-    mean = np.zeros(y.shape[2]) # mean[0,0,:]
-    scale = np.array([1 /100 for _ in range(y.shape[2])]) # scale[0,0,:]
+    mean = mean[0,0,:] # np.zeros(y.shape[2]) # 
+    scale = scale[0,0,:] # np.array([1 /100 for _ in range(y.shape[2])]) 
 
     return (shift_scale(y, mean, scale), mean, scale)
 
@@ -81,7 +81,11 @@ def downsample_array(arr, n_new_sample, axis=0, seed=None, replace=False):
     return np.take(arr, indices, axis=axis)
 
 def f1(x):
-    x[0]
+    """
+    dummy observation function of first coordinate
+    x : (batch, seq_len, n_dim)
+    """
+    return x[:, :, 0]
 
 class Dataset:
     """Dataset of transients obtained from a given system."""
@@ -101,8 +105,10 @@ class Dataset:
                  load_data: bool = False,
                  data_set_name : str = '',
                  normalize_data : bool = True,
-                 shift : np.ndarray = None,
-                 scale : np.ndarray = None,
+                 shift_in : np.ndarray = None,
+                 scale_in : np.ndarray = None,
+                 shift_out : np.ndarray = None,
+                 scale_out : np.ndarray = None,
                  ) -> None:
         """
         Create set of trajectories.
@@ -127,10 +133,13 @@ class Dataset:
 
         if load_data:
             self.tt = np.load(self.path + "/time_array.npy")
+            self.dyn_sys_states = np.load(self.path + "/dyn_sys_states.npy")
             self.input_data = np.load(self.path + "/input_data.npy")
             self.output_data = np.load(self.path + "/output_data.npy")
-            shift_scale_val = np.load(self.path + "/shift_scale.npy")
-            self.shift, self.scale = shift_scale_val
+            shift_scale_val_in = np.load(self.path + "/shift_scale_in.npy")
+            shift_scale_val_out = np.load(self.path + "/shift_scale_out.npy")
+            self.shift_in, self.scale_in = shift_scale_val_in
+            self.shift_out, self.scale_out = shift_scale_val_out
             self.ids = np.arange(len(self.input_data))
         else:
             print("Creating data")
@@ -146,12 +155,17 @@ class Dataset:
             self.tt = time_array # (len_trajectories)
 
             if normalize_data:
-                if shift is None and scale is None:
-                    _, shift, scale = normalise(self.input_data)
-                self.shift = shift
-                self.scale = scale
-                self.input_data = shift_scale(self.input_data, shift, scale)
-                self.output_data = shift_scale(self.output_data, shift, scale)
+                if shift_in is None and scale_in is None:
+                    _, shift_in, scale_in = normalise(self.input_data)
+                self.shift_in = shift_in
+                self.scale_in = scale_in
+                self.input_data = shift_scale(self.input_data, shift_in, scale_in)
+
+                if shift_out is None and scale_out is None:
+                    _, shift_out, scale_out = normalise(self.input_data)
+                self.shift_out = shift_out
+                self.scale_out = scale_out
+                self.output_data = shift_scale(self.output_data, shift_out, scale_out)
 
             folder = self.path
             os.makedirs(folder, exist_ok=True)  # creates the folder if it doesn't exist
@@ -160,7 +174,8 @@ class Dataset:
             np.save(os.path.join(folder, "dyn_sys_states.npy"), self.dyn_sys_states)
             np.save(os.path.join(folder, "input_data.npy"), self.input_data)
             np.save(os.path.join(folder, "output_data.npy"), self.output_data)
-            np.save(os.path.join(folder, "shift_scale.npy"), (self.shift, self.scale))
+            np.save(os.path.join(folder, "shift_scale_in.npy"), (self.shift_in, self.scale_in))
+            np.save(os.path.join(folder, "shift_scale_out.npy"), (self.shift_out, self.scale_out))
 
 
     def __len__(self) -> int:
@@ -179,6 +194,7 @@ class Dataset:
         os.makedirs(folder, exist_ok=True)  # creates the folder if it doesn't exist
         np.savez(
             folder + '/data',
+            dyn_sys_states = self.dyn_sys_states,
             input_data=self.input_data,
             output_data=self.output_data,
             tt_arr=self.tt,

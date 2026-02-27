@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from utils.dynamical_systems import obs_coord
 
 config = {}
 
@@ -12,6 +13,7 @@ config["MODEL"]["RC_type"] = "ESN"
 config["TRAINING"]["ridge"] = True
 
 config["MODEL"]["input_size"] = 1
+config["MODEL"]["output_size"] = 1
 
 if config["TRAINING"]["ridge"]:
     config["MODEL"]["hidden_size"] = []
@@ -56,10 +58,14 @@ config["TRAINING"]["offset"] = 1000
 config["TRAINING"]["device"] = "cpu"
 config["TRAINING"]["ridge_factor"] = 3.1622776601683794e-15 # 1e-9
 
+
+
 config["DATA"]["dynamical_system_name"] = 'lorenz'
+config["DATA"]["observations_in"] = lambda y: obs_coord(y, 0)
+config["DATA"]["observations_out"] = lambda y: obs_coord(y, 0)
 config["DATA"]["parameters"] = (10, 8/3, 28)
 config["DATA"]["max_warmup"] = 1000
-config["DATA"]["step"] = 0.02
+config["DATA"]["step"] = 0.01
 config["DATA"]["y0"] = np.array([0,0,27]).astype(np.float64)
 config["DATA"]["initial_points_sd"] = 20
 config["DATA"]["n_train"] = 1000
@@ -74,7 +80,7 @@ config["DATA"]["load_samples"] = False
 config["DATA"]["load_sample_dists"] = False
 config["DATA"]["normalize_data"] = True
 config["PATH"] = "lorenz/models/"
-config["FILE_NAME_TAG"] = config["MODEL"]["RC_type"] + '_ridge_' + str(config["TRAINING"]["ridge"])
+config["FILE_NAME_TAG"] = config["MODEL"]["RC_type"] + '_size_'+ str(config["MODEL"]["reservoir_size"])
 
 
 

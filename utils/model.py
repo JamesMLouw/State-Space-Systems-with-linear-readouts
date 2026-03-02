@@ -170,6 +170,7 @@ class ESNModel:
 
         self.train_loss = []
         self.val_loss = []
+        self.states_embedding = []
 
         self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             self.optimizer, patience=10, factor=0.5, min_lr=0.000001
@@ -246,7 +247,7 @@ class ESNModel:
                 cnt += 1
         self.val_loss.append(sum_loss / cnt)
         return sum_loss / cnt
-
+    
     def integrate(self, x_0, T, h0=None):
         """
         Integrate batch of trajectories.
@@ -316,7 +317,7 @@ class ESNModel:
     
     def save_network(self, name):
         """Save network weights and training loss history."""
-        filename = name + "_reservoir_size_" + str(self.net.reservoir_size) + ".net"
+        filename = name + "_res_size_" + str(self.net.reservoir_size) + ".net"
         torch.save(self.net.state_dict(), filename)
         np.save(name + "_training_loss.npy", np.array(self.train_loss))
         np.save(name + "_validation_loss.npy", np.array(self.val_loss))
@@ -328,6 +329,39 @@ class ESNModel:
         self.net.load_state_dict(torch.load(filename))
         self.train_loss = np.load(name + "_training_loss.npy").tolist()
         self.val_loss = np.load(name + "_validation_loss.npy").tolist()
+
+
+    def generate_embedding_data(self, h0=None):
+        """
+        generate data of embedding when driven by inputs
+        input : (batch, offset + seq_len, input_size)
+        h_0 : (batch, reservoir_size)
+        """
+        self.net.eval()
+
+        input = torch.tensor(self.dataloader_train.dataset.input_data, dtype=torch.float64)
+        batch = input.shape[0]
+        input = input.to(self.device)
+        if h0 is None:
+            h0 = input.new_zeros(batch, self.net.reservoir_size).to(self.device)
+
+        states, _ = self.net(input, return_states=True)
+        states_embedding = states[:, self.offset :] # (batch, sequence_length - self.offset, reservoir_size)
+        self.states_embedding = states_embedding
+        return states_embedding
+
+    def save_network_embedding(self, name):
+        """Save network weights and embedding data."""
+        filename = name + "_reservoir_size_" + str(self.net.reservoir_size) + ".net"
+        torch.save(self.net.state_dict(), filename)
+        np.save(name+"_res_size_" + str(self.net.reservoir_size) + "_emb.npy", np.array(self.states_embedding))
+
+        
+    def load_network_embedding(self, name):
+        """Load network weights and embedding data."""
+        filename = name + "_reservoir_size_" + str(self.net.reservoir_size) + ".net"
+        self.net.load_state_dict(torch.load(filename))
+        self.states_embedding = np.load(name+"_res_size_" + str(self.net.reservoir_size) + "_emb.npy").tolist()
 
 
 class ESNModel_DS(DS):

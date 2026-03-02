@@ -152,7 +152,7 @@ dataloader_val = DataLoader(
 
 network = Network(
     config["MODEL"]["input_size"],
-    config["MODEL"]["reservoir_size"],
+    7, # config["MODEL"]["reservoir_size"],
     config["MODEL"]["hidden_size"],
     config["MODEL"]["output_size"],
     config["MODEL"]["scale_rec"],
@@ -171,9 +171,6 @@ model = Model(
 )
 #%%
 config["TRAINING"]["ridge"]
-
-#%%
-dataset_train.input_data.shape
 
 #%%
 if config["TRAINING"]["ridge"]:
@@ -209,8 +206,6 @@ model.net = model.net.to("cpu")
 model.save_network(config["PATH"] + tag + "_model_")
 model.net = model.net.to(model.device)
 
-#%%
-dataset_test.input_data.shape
 #%%
 i = np.random.randint(config["DATA"]["n_test"])
 print('initial condition ', i)

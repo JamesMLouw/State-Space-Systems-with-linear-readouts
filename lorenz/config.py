@@ -45,8 +45,8 @@ else:
 
     elif config["MODEL"]["RC_type"] == "RCN":
         config["MODEL"]["reservoir_size"] = 2**11
-        config["MODEL"]["scale_rec"] = 1.2
-        config["MODEL"]["scale_in"] = 13/3
+        config["MODEL"]["scale_rec"] = 1 #.2
+        config["MODEL"]["scale_in"] = 1 # 13/3
         config["MODEL"]["leaking_rate"] = 1
 
 config["TRAINING"]["epochs"] = 100
@@ -56,7 +56,7 @@ config["TRAINING"]["dtype"] = torch.float64
 config["TRAINING"]["gh_num_eigenpairs"] = 100
 config["TRAINING"]["offset"] = 1000
 config["TRAINING"]["device"] = "cpu"
-config["TRAINING"]["ridge_factor"] = 3.1622776601683794e-15 # 1e-9
+config["TRAINING"]["ridge_factor"] = 1e-9 #3.1622776601683794e-15 
 
 
 
@@ -68,11 +68,11 @@ config["DATA"]["max_warmup"] = 1000
 config["DATA"]["step"] = 0.01
 config["DATA"]["y0"] = np.array([0,0,27]).astype(np.float64)
 config["DATA"]["initial_points_sd"] = 20
-config["DATA"]["n_train"] = 1000
+config["DATA"]["n_train"] = 50
 config["DATA"]["n_val"] = 0
-config["DATA"]["n_test"] = 10
-config["DATA"]["l_trajectories_train"] = 3000
-config["DATA"]["l_trajectories_val"] = 3000
+config["DATA"]["n_test"] = 50
+config["DATA"]["l_trajectories_train"] = 1500
+config["DATA"]["l_trajectories_val"] = 1500
 config["DATA"]["l_trajectories_test"] = 3000
 config["DATA"]["data_type"] = torch.float64
 config["DATA"]["method"] = 'RK4'
@@ -81,7 +81,7 @@ config["DATA"]["load_samples"] = False
 config["DATA"]["load_sample_dists"] = False
 config["DATA"]["normalize_data"] = True
 config["PATH"] = "lorenz/models/"
-config["FILE_NAME_TAG"] = config["MODEL"]["RC_type"] + '_size_'+ str(config["MODEL"]["reservoir_size"])
+config["FILE_NAME_TAG"] = config["MODEL"]["RC_type"]
 
 
 

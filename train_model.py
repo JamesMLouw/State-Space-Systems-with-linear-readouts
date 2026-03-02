@@ -3,6 +3,7 @@ import os
 
 import matplotlib.pyplot as plt
 import torch
+import numpy as np
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 
@@ -34,7 +35,7 @@ else:
 #%%
 dataset_train = Dataset(
     num_trajectories = config["DATA"]["n_train"],
-    len_trajectories = config["DATA"]["l_trajectories"],
+    len_trajectories = config["DATA"]["l_trajectories_train"],
     step = config["DATA"]["step"], 
     dynamical_system_name = config["DATA"]["dynamical_system_name"],
     parameters = config["DATA"]["parameters"],
@@ -55,7 +56,7 @@ dataset_train.save_data()
 #%%
 dataset_val = Dataset(
     num_trajectories = config["DATA"]["n_val"],
-    len_trajectories = config["DATA"]["l_trajectories"],
+    len_trajectories = config["DATA"]["l_trajectories_val"],
     step = config["DATA"]["step"], 
     dynamical_system_name = config["DATA"]["dynamical_system_name"],
     parameters = config["DATA"]["parameters"],
@@ -99,7 +100,7 @@ dataset_test = Dataset(
 dataset_test.save_data()
 
 
-#%%
+#%% plot input data
 fig = plt.figure()
 ax = fig.add_subplot(111)
 ax.plot(dataset_train.tt[:-1], dataset_train.input_data[0][:, 0], label="u")
@@ -111,7 +112,23 @@ plt.legend()
 folder = dynamical_system_name + "/fig"
 os.makedirs(folder, exist_ok=True)  # creates the folder if it doesn't exist
 
-plt.savefig(os.path.join(folder, "data.pdf"), bbox_inches="tight")
+plt.savefig(os.path.join(folder, "input_data.pdf"), bbox_inches="tight")
+plt.show()
+
+plt.close()
+
+#%% plot output data
+
+fig = plt.figure()
+ax = fig.add_subplot(111)
+ax.plot(dataset_train.tt[:-1], dataset_train.output_data[0][:, 0], label="u")
+ax.set_xlabel("t")
+plt.legend()
+
+folder = dynamical_system_name + "/fig"
+os.makedirs(folder, exist_ok=True)  # creates the folder if it doesn't exist
+
+plt.savefig(os.path.join(folder, "output_data.pdf"), bbox_inches="tight")
 plt.show()
 
 plt.close()
@@ -137,7 +154,7 @@ network = Network(
     config["MODEL"]["input_size"],
     config["MODEL"]["reservoir_size"],
     config["MODEL"]["hidden_size"],
-    config["MODEL"]["input_size"],
+    config["MODEL"]["output_size"],
     config["MODEL"]["scale_rec"],
     config["MODEL"]["scale_in"],
     config["MODEL"]["leaking_rate"],
@@ -154,6 +171,9 @@ model = Model(
 )
 #%%
 config["TRAINING"]["ridge"]
+
+#%%
+dataset_train.input_data.shape
 
 #%%
 if config["TRAINING"]["ridge"]:
@@ -190,16 +210,20 @@ model.save_network(config["PATH"] + tag + "_model_")
 model.net = model.net.to(model.device)
 
 #%%
+dataset_test.input_data.shape
+#%%
+i = np.random.randint(config["DATA"]["n_test"])
+print('initial condition ', i)
 warmup = config["DATA"]["max_warmup"]
 predictions, _ = model.integrate(
-    torch.tensor(dataset_test.input_data[0, :warmup, :], dtype=torch.get_default_dtype()).unsqueeze(0).to(model.device),
-    T=dataset_test.input_data[0].shape[0] - warmup,
+    torch.tensor(dataset_test.input_data[i, :warmup, :], dtype=torch.get_default_dtype()).unsqueeze(0).to(model.device),
+    T=dataset_test.input_data[i].shape[0] - warmup,
 )
 
 #%%
 fig = plt.figure()
 ax = fig.add_subplot(111)
-ax.plot(dataset_test.tt[:-1], dataset_test.input_data[0][:, 0], label="true")
+ax.plot(dataset_test.tt[:-1], dataset_test.output_data[i][:, 0], label="true")
 if len(predictions.shape) > 1:
     ax.plot(dataset_test.tt[:-1], predictions[:, :, 0].detach().squeeze(0), label="prediction")
 else:
@@ -207,13 +231,15 @@ else:
 ax.axvline(x=dataset_test.tt[warmup], color="k")
 ax.set_xlabel("$t$")
 ax.set_ylabel("$x$")
+ax.legend()
 folder = dynamical_system_name + "/fig"
 os.makedirs(folder, exist_ok=True)  # creates the folder if it doesn't exist
 
-plt.savefig(os.path.join(folder, "predictions.png"))
+plt.savefig(os.path.join(folder, "predictions.pdf"), bbox_inches="tight")
+plt.show()
 plt.close()
-# %%
 
+# %% plot 3d predictions
 
 x_plot = predictions[:,:,0].detach().squeeze(0)
 y_plot = predictions[:,:,1].detach().squeeze(0)
@@ -227,5 +253,7 @@ ax.set_ylabel('y')
 ax.set_zlabel('z')
 
 
-plt.savefig(os.path.join(folder, "predictions3d.png"))
+plt.savefig(os.path.join(folder, "predictions_3d.pdf"), bbox_inches="tight")
+plt.show()
 plt.close()
+# %%

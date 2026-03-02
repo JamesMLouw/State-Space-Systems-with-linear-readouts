@@ -185,18 +185,26 @@ class ESNModel:
             out = out[:, self.offset :] # (batch, sequence_length - self.offset, reservoir_size)
             y = y[:, self.offset :] # (batch, sequence_length - self.offset, n_dim)
             out_np = out.reshape(-1, out.shape[-1]).detach().cpu().numpy()
-            y_np = y.reshape(-1, self.net.input_size).detach().cpu().numpy()
+            y_np = y.reshape(-1, self.net.output_size).detach().cpu().numpy()
 
             clf = Ridge(alpha=self.ridge_factor)
             clf.fit(out_np, y_np)
+            coef = clf.coef_
+            intercept = clf.intercept_
+            if coef.ndim == 1:
+                coef = np.expand_dims(coef, axis=0)
+                intercept = np.expand_dims(intercept, axis=0)
+
             self.net.readout.fc_layers[0].weight = torch.nn.Parameter(
-                torch.tensor(clf.coef_, dtype=torch.float64).to(self.device)
+                torch.tensor(coef, dtype=torch.float64).to(self.device)
             )
             self.net.readout.fc_layers[0].bias = torch.nn.Parameter(
-                torch.tensor(clf.intercept_, dtype=torch.float64).to(self.device)
+                torch.tensor(intercept, dtype=torch.float64).to(self.device)
                 # torch.zeros_like(self.net.readout.fc_layers[0].bias).to(self.device)
             )
-            sum_loss = self.criterion(self.net.readout(out), y.to(self.device)).detach().cpu().numpy()
+
+            pred = self.net.readout(out)
+            sum_loss = self.criterion(pred, y.to(self.device)).detach().cpu().numpy()
             cnt = 1
         else:
             self.net.train()
@@ -245,7 +253,11 @@ class ESNModel:
         x_0 : (batch, warm_up_length, input_size)
         T : num_time_steps_integrate_forward
         h0 : (batch, reservoir_size)
+        requires input_size == output_size
         """
+        if not(self.net.input_size == self.net.output_size):
+            raise ValueError('input_size != output_size')
+        
         self.net.eval()
 
         batch = x_0.shape[0]
@@ -282,6 +294,9 @@ class ESNModel:
         """
         h : (batch, reservoir_size)
         """
+        if not(self.net.input_size == self.net.output_size):
+            raise ValueError('input_size != output_size')
+        
         self.net.eval()
         input_is_numpy = isinstance(h, np.ndarray)
         

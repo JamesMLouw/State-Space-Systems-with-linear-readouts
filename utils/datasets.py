@@ -162,7 +162,7 @@ class Dataset:
                 self.input_data = shift_scale(self.input_data, shift_in, scale_in)
 
                 if shift_out is None and scale_out is None:
-                    _, shift_out, scale_out = normalise(self.input_data)
+                    _, shift_out, scale_out = normalise(self.output_data)
                 self.shift_out = shift_out
                 self.scale_out = scale_out
                 self.output_data = shift_scale(self.output_data, shift_out, scale_out)

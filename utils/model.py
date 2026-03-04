@@ -361,7 +361,7 @@ class ESNModel:
         """Load network weights and embedding data."""
         filename = name + "_reservoir_size_" + str(self.net.reservoir_size) + ".net"
         self.net.load_state_dict(torch.load(filename))
-        self.states_embedding = np.load(name+"_res_size_" + str(self.net.reservoir_size) + "_emb.npy").tolist()
+        self.states_embedding = torch.tensor(np.load(name+"_res_size_" + str(self.net.reservoir_size) + "_emb.npy"), dtype=torch.float64).to(self.device)
 
 
 class ESNModel_DS(DS):

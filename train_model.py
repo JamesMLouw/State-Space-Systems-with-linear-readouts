@@ -152,7 +152,7 @@ dataloader_val = DataLoader(
 
 network = Network(
     config["MODEL"]["input_size"],
-    7, # config["MODEL"]["reservoir_size"],
+    500, # config["MODEL"]["reservoir_size"],
     config["MODEL"]["hidden_size"],
     config["MODEL"]["output_size"],
     config["MODEL"]["scale_rec"],
@@ -169,6 +169,8 @@ model = Model(
     ridge_factor=config["TRAINING"]["ridge_factor"],
     device=config["TRAINING"]["device"],
 )
+
+model.load_network_embedding(config["PATH"] + tag + "_model_")
 #%%
 config["TRAINING"]["ridge"]
 

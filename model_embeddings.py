@@ -9,6 +9,7 @@ from tqdm.auto import tqdm
 
 from utils.datasets import Dataset
 from utils.model import ESN, ESNModel, RCN, RCNModel, progress
+from utils import linear_analysis
 
 dynamical_system_name = 'lorenz'
 
@@ -31,6 +32,8 @@ elif RC_type == 'RCN':
     Model = RCNModel
 else:
     print('RC not supported')
+
+generate_embedding_data = True
 
 #%%
 dataset_train = Dataset(
@@ -127,7 +130,7 @@ dataloader_val = DataLoader(
     pin_memory=True,
 )
 
-network_sizes = [10, 50, 100, 200, 500]
+network_sizes = [ 16, 32, 64, 128, 256, 512] # [10, 50, 100, 200] # , 500]
 Networks = []
 Models = []
 
@@ -153,12 +156,70 @@ for N in network_sizes:
     Networks.append(network)
     Models.append(model)
 
-#%%
+#%% Generate/load embedding data
+
+Embeddings = []
 
 for model in Models:
-    states_embedding = model.generate_embedding_data()
-    print(states_embedding.shape)
-    model.save_network_embedding(config["PATH"] + tag + "_model_")
+    if generate_embedding_data:
+        states_embedding = np.array(model.generate_embedding_data())
+        print(states_embedding.shape)
+        model.save_network_embedding(config["PATH"] + tag + "_model_")
+    else:
+        model.load_network_embedding(config["PATH"] + tag + "_model_")
+        states_embedding = np.array(model.states_embedding)
+
+    Embeddings.append(states_embedding)
+
+#%%
+target = dataset_train.output_data[:,config["TRAINING"]["offset"]:, :]
+deg_1_train_r2 = []
+deg_1_test_r2 = []
+deg_2_train_r2 = []
+deg_2_test_r2 = []
+
+fig_pca, ax_pca = plt.subplots(2,3, figsize=(10, 6), subplot_kw={'projection': '3d'}, sharex=True)
+fig_sv, ax_sv = plt.subplots(2,3, figsize=(10, 6), sharex=True)
+fig_cv, ax_cv = plt.subplots(2,3, figsize=(10, 6), sharex=True)
+ax_pca = ax_pca.ravel()
+ax_sv = ax_sv.ravel()
+ax_cv = ax_cv.ravel()
+
+for i, (emb, net_size) in enumerate(zip(Embeddings, network_sizes)):
+    print(i)
+    batch, seq_len, n_dim = emb.shape
+    components, sing_vals, mean= linear_analysis.svd(emb)
+    ax_pca[i] = linear_analysis.plot_pca_projection(emb, components, ax_pca[i]) # os.path.join(folder, "PCA_projection_net_size_"+str(net_size)+".pdf"))
+    # linear_analysis.plot_singular_values(sing_vals, ax_sv[i]) # os.path.join(folder, "sing_vals_net_size_"+str(net_size)+".pdf"))
+    # linear_analysis.plot_cumulative_variance(sing_vals, batch * seq_len, ax_cv[i]) # os.path.join(folder, "cum_var_net_size_"+str(net_size)+".pdf"))
+    r2_results = linear_analysis.compare_linear_polynomial(emb, target, max_degree=1)
+    deg_1_train_r2.append(r2_results['degree_1']['train_r2'])
+    deg_1_test_r2.append(r2_results['degree_1']['test_r2'])
+    # deg_2_train_r2.append(r2_results['degree_2']['train_r2'])
+    # deg_2_test_r2.append(r2_results['degree_2']['test_r2'])
 
 #%%
 
+fig_pca.savefig("pca_figure.pdf", bbox_inches="tight")
+fig_sv.savefig("singular_values.pdf", bbox_inches="tight")
+fig_cv.savefig("cumulative_variance.pdf", bbox_inches="tight")
+
+plt.show()
+# %%
+print(deg_1_test_r2[1])
+#%%
+plt.plot(deg_1_train_r2)
+plt.show()
+#%%
+plt.plot(deg_1_test_r2)
+plt.show()
+#%%
+plt.plot(deg_2_train_r2)
+plt.show()
+#%%
+plt.plot(deg_2_test_r2)
+plt.show()
+# %%
+print(deg_2_train_r2)
+
+# %%

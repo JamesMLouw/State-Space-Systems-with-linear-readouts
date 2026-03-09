@@ -29,7 +29,6 @@ def svd(X, n_components=None):
     mean = X_flat.mean(axis=0)
     X_centered = X_flat - mean
     U, S, Vt = np.linalg.svd(X_centered, full_matrices=False)
-
     
     if n_components is None:
         k = n_dim
@@ -159,22 +158,24 @@ def compare_linear_polynomial(X, Y, max_degree=2, test_split=0.2, random_state=0
     _, _, d_y = Y.shape
     N = B * T
 
-    # Flatten
-    Xf = X.reshape(N, d_x)
-    Yf = Y.reshape(N, d_y)
-
     # Train/test split
     rng = np.random.default_rng(random_state)
-    indices = rng.permutation(N)
+    indices = rng.permutation(B)
 
-    n_train = int((1 - test_split) * N)
+    n_train = int((1 - test_split) * B)
+    n_test = B - n_train
     train_idx = indices[:n_train]
     test_idx = indices[n_train:]
 
-    X_train, X_test = Xf[train_idx], Xf[test_idx]
-    Y_train, Y_test = Yf[train_idx], Yf[test_idx]
+    X_train, X_test = X[train_idx], X[test_idx]
+    Y_train, Y_test = Y[train_idx], Y[test_idx]
 
-    results = {}
+    # Flatten
+    X_train, X_test = X_train.reshape(n_train * T, d_x), X_test.reshape(n_test * T, d_x)
+    Y_train,  Y_test = Y_train.reshape(n_train * T, d_y), Y_test.reshape(n_test * T, d_y)
+
+
+    results_train, results_test, n_features = [], [], []
 
     for degree in range(1, max_degree + 1):
 
@@ -189,16 +190,14 @@ def compare_linear_polynomial(X, Y, max_degree=2, test_split=0.2, random_state=0
         Y_train_pred = model.predict(X_train_poly)
         Y_test_pred = model.predict(X_test_poly)
 
-        results[f"degree_{degree}"] = {
-            "train_r2": r2_score(Y_train, Y_train_pred),
-            "test_r2": r2_score(Y_test, Y_test_pred),
-            "n_features": X_train_poly.shape[1]
-        }
+        results_train.append(r2_score(Y_train, Y_train_pred))
+        results_test.append(r2_score(Y_test, Y_test_pred))
+        n_features.append(X_train_poly.shape[1])
 
-    return results
+    return np.array(results_train), np.array(results_test), n_features
 
 
-def r2_linearity_fraction(X, Y, max_degree=3):
+def r2_linearity_fraction(X, Y, max_degree=2):
     best_r2 = 0
     r2_linear = 0
     for degree in range(1, max_degree+1):

@@ -130,7 +130,7 @@ dataloader_val = DataLoader(
     pin_memory=True,
 )
 
-network_sizes = [ 16, 32, 64, 128, 256, 512] # [10, 50, 100, 200] # , 500]
+network_sizes = [16]*10 # [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] # , 32, 48, 64, 80, 96, 128, 256, 512] # [10, 50, 100, 200] # , 500]
 Networks = []
 Models = []
 
@@ -171,12 +171,8 @@ for model in Models:
 
     Embeddings.append(states_embedding)
 
-#%%
+#%% plot svd
 target = dataset_train.output_data[:,config["TRAINING"]["offset"]:, :]
-deg_1_train_r2 = []
-deg_1_test_r2 = []
-deg_2_train_r2 = []
-deg_2_test_r2 = []
 
 fig_pca, ax_pca = plt.subplots(2,3, figsize=(10, 6), subplot_kw={'projection': '3d'}, sharex=True)
 fig_sv, ax_sv = plt.subplots(2,3, figsize=(10, 6), sharex=True)
@@ -192,11 +188,6 @@ for i, (emb, net_size) in enumerate(zip(Embeddings, network_sizes)):
     ax_pca[i] = linear_analysis.plot_pca_projection(emb, components, ax_pca[i]) # os.path.join(folder, "PCA_projection_net_size_"+str(net_size)+".pdf"))
     # linear_analysis.plot_singular_values(sing_vals, ax_sv[i]) # os.path.join(folder, "sing_vals_net_size_"+str(net_size)+".pdf"))
     # linear_analysis.plot_cumulative_variance(sing_vals, batch * seq_len, ax_cv[i]) # os.path.join(folder, "cum_var_net_size_"+str(net_size)+".pdf"))
-    r2_results = linear_analysis.compare_linear_polynomial(emb, target, max_degree=1)
-    deg_1_train_r2.append(r2_results['degree_1']['train_r2'])
-    deg_1_test_r2.append(r2_results['degree_1']['test_r2'])
-    # deg_2_train_r2.append(r2_results['degree_2']['train_r2'])
-    # deg_2_test_r2.append(r2_results['degree_2']['test_r2'])
 
 #%%
 
@@ -205,21 +196,48 @@ fig_sv.savefig("singular_values.pdf", bbox_inches="tight")
 fig_cv.savefig("cumulative_variance.pdf", bbox_inches="tight")
 
 plt.show()
-# %%
-print(deg_1_test_r2[1])
-#%%
-plt.plot(deg_1_train_r2)
-plt.show()
-#%%
-plt.plot(deg_1_test_r2)
-plt.show()
-#%%
-plt.plot(deg_2_train_r2)
-plt.show()
-#%%
-plt.plot(deg_2_test_r2)
-plt.show()
-# %%
-print(deg_2_train_r2)
 
+#%% plot svd for single res size
+
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d') 
+
+i = 9
+print(i)
+emb, net_size = Embeddings[i], network_sizes[i]
+batch, seq_len, n_dim = emb.shape
+components, sing_vals, mean= linear_analysis.svd(emb)
+
+ax = linear_analysis.plot_pca_projection(emb, components, ax) # os.path.join(folder, "PCA_projection_net_size_"+str(net_size)+".pdf"))
+# linear_analysis.plot_singular_values(sing_vals, ax_sv[i]) # os.path.join(folder, "sing_vals_net_size_"+str(net_size)+".pdf"))
+# linear_analysis.plot_cumulative_variance(sing_vals, batch * seq_len, ax_cv[i]) # os.path.join(folder, "cum_var_net_size_"+str(net_size)+".pdf"))
+
+# Show the plot
+plt.show()
+#%% check r2 scores for linear and higher order polys
+max_deg = 3
+training_r2 = np.zeros((len(network_sizes), max_deg))
+testing_r2 = np.zeros((len(network_sizes), max_deg))
+
+for i, (emb, net_size) in enumerate(zip(Embeddings, network_sizes)):
+    print(i)
+    r2_results = linear_analysis.compare_linear_polynomial(emb, target, max_degree=max_deg)
+    training_r2[i] = r2_results[0]
+    testing_r2[i] = r2_results[1]
+    print(r2_results[2])
+
+# %% plot r2 with different degree polys
+x_pos = np.arange(len(network_sizes))
+plt.figure(figsize=(8,5))
+for i in range(2, max_deg):
+    plt.semilogy(x_pos, training_r2[:, i], marker='o', linestyle='-', label = f'deg {i+1} train r2')
+    plt.semilogy(x_pos, testing_r2[:, i], marker='o', linestyle='-', label = f'deg {i+1} test r2')
+
+plt.xticks(x_pos, network_sizes)
+
+plt.xlabel('reservoir size')
+plt.ylabel('r2')
+plt.title('r2')
+plt.legend()
+plt.show()
 # %%

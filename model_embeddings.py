@@ -143,6 +143,7 @@ for N in network_sizes:
         config["MODEL"]["scale_rec"],
         config["MODEL"]["scale_in"],
         config["MODEL"]["leaking_rate"],
+        readout_degree = config["MODEL"]["readout_degree"]
     )
     model = Model(
         dataloader_train,
@@ -186,8 +187,8 @@ for i, (emb, net_size) in enumerate(zip(Embeddings, network_sizes)):
     batch, seq_len, n_dim = emb.shape
     components, sing_vals, mean= linear_analysis.svd(emb)
     ax_pca[i] = linear_analysis.plot_pca_projection(emb, components, ax_pca[i]) # os.path.join(folder, "PCA_projection_net_size_"+str(net_size)+".pdf"))
-    # linear_analysis.plot_singular_values(sing_vals, ax_sv[i]) # os.path.join(folder, "sing_vals_net_size_"+str(net_size)+".pdf"))
-    # linear_analysis.plot_cumulative_variance(sing_vals, batch * seq_len, ax_cv[i]) # os.path.join(folder, "cum_var_net_size_"+str(net_size)+".pdf"))
+    linear_analysis.plot_singular_values(sing_vals, ax_sv[i]) # os.path.join(folder, "sing_vals_net_size_"+str(net_size)+".pdf"))
+    linear_analysis.plot_cumulative_variance(sing_vals, batch * seq_len, ax_cv[i]) # os.path.join(folder, "cum_var_net_size_"+str(net_size)+".pdf"))
 
 #%%
 

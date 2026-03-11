@@ -14,6 +14,7 @@ config["TRAINING"]["ridge"] = True
 
 config["MODEL"]["input_size"] = 1
 config["MODEL"]["output_size"] = 1
+config["MODEL"]["readout_degree"] = 3
 
 if config["TRAINING"]["ridge"]:
     config["MODEL"]["hidden_size"] = []

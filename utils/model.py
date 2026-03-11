@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 from sklearn.linear_model import Ridge
+from sklearn.preprocessing import PolynomialFeatures
 from torch import nn
 from tqdm.auto import tqdm
 from utils.dynamical_systems import DS
@@ -57,6 +58,42 @@ class DenseStack(nn.Module):
                 input_tensor = self.acts[i_layer](input_tensor)
         return input_tensor
 
+class PolynomialReadout(nn.Module):
+    def __init__(self, input_size, output_size, degree=1, include_bias=False):
+        super().__init__()
+
+        self.degree = degree
+        self.include_bias = include_bias
+        self.poly = PolynomialFeatures(degree=degree, include_bias=include_bias)
+
+        # determine number of polynomial features
+        dummy = self.poly.fit_transform(
+            torch.zeros(1, input_size).numpy()
+        )
+        poly_dim = dummy.shape[1]
+
+        self.fc = nn.Linear(poly_dim, output_size, bias=True, dtype=torch.float64)
+
+    def transform(self, x):
+        """
+        x: (batch, seq_len, input_size)
+        returns polynomial features
+        """
+        # if x.ndim == 2:
+            # x = x.unsqueeze(0)
+        B, T, D = x.shape
+        x_np = x.reshape(-1, D).detach().cpu().numpy()
+
+        poly_x = self.poly.fit_transform(x_np)
+
+        poly_x = torch.tensor(poly_x, dtype=torch.float64, device=x.device)
+        poly_x = poly_x.reshape(B, T, -1)
+
+        return poly_x
+
+    def forward(self, x):
+        poly_x = self.transform(x)
+        return self.fc(poly_x)
 
 class ESN(nn.Module):
     """Taken from https://github.com/danieleds/TorchRC/blob/master/torch_rc/nn/esn.py."""
@@ -71,6 +108,7 @@ class ESN(nn.Module):
         scale_in: float = 1.0 / 40.0,
         leaking_rate: float = 0.5,
         rec_rescaling_method: str = "specrad",  # Either "norm" or "specrad"
+        readout_degree: int = 1
     ):
         super(ESN, self).__init__()
 
@@ -92,7 +130,8 @@ class ESN(nn.Module):
         self.register_buffer("W_in", W_in)
         self.register_buffer("W_hat", W_hat)
         # self.readout = nn.Linear(reservoir_size, output_size, bias=True)
-        self.readout = DenseStack(reservoir_size, hidden_size, output_size)
+        # self.readout = DenseStack(reservoir_size, hidden_size, output_size)
+        self.readout = PolynomialReadout(reservoir_size, output_size, readout_degree)
 
     @staticmethod
     def rescale_contractivity(W, coeff, rescaling_method):
@@ -127,13 +166,15 @@ class ESN(nn.Module):
         layer_outputs = []  # list of (batch, reservoir_size)
         step_h = h_0
         for i in range(next_layer_input.shape[1]):
-            x_t = next_layer_input[:, i]
+            x_t = next_layer_input[:, i, :]
+            print(x_t.size)
+            print(step_h.size)
             h = self.forward_reservoir(x_t, step_h)  # (batch, reservoir_size)
             step_h = h
             if return_states:
                 layer_outputs.append(h)
             else:
-                layer_outputs.append(self.readout(h))
+                layer_outputs.append(self.readout(h.unsqueeze(1)))
         h_n = step_h
         layer_outputs = torch.stack(layer_outputs, axis=1) # (batch, sequence_length, output_size or reservoir_size)
         return layer_outputs, h_n
@@ -185,21 +226,22 @@ class ESNModel:
             out, _ = self.net(x.to(self.device), return_states=True)
             out = out[:, self.offset :] # (batch, sequence_length - self.offset, reservoir_size)
             y = y[:, self.offset :] # (batch, sequence_length - self.offset, n_dim)
-            out_np = out.reshape(-1, out.shape[-1]).detach().cpu().numpy()
+            poly_out = self.net.readout.transform(out) # (batch, sequence_length - self.offset, n_poly_dim)
+            poly_out_np = poly_out.reshape(-1, poly_out.shape[-1]).detach().cpu().numpy()
             y_np = y.reshape(-1, self.net.output_size).detach().cpu().numpy()
 
             clf = Ridge(alpha=self.ridge_factor)
-            clf.fit(out_np, y_np)
+            clf.fit(poly_out_np, y_np)
             coef = clf.coef_
             intercept = clf.intercept_
             if coef.ndim == 1:
                 coef = np.expand_dims(coef, axis=0)
                 intercept = np.expand_dims(intercept, axis=0)
 
-            self.net.readout.fc_layers[0].weight = torch.nn.Parameter(
+            self.net.readout.fc.weight = torch.nn.Parameter(
                 torch.tensor(coef, dtype=torch.float64).to(self.device)
             )
-            self.net.readout.fc_layers[0].bias = torch.nn.Parameter(
+            self.net.readout.fc.bias = torch.nn.Parameter(
                 torch.tensor(intercept, dtype=torch.float64).to(self.device)
                 # torch.zeros_like(self.net.readout.fc_layers[0].bias).to(self.device)
             )
@@ -208,29 +250,31 @@ class ESNModel:
             sum_loss = self.criterion(pred, y.to(self.device)).detach().cpu().numpy()
             cnt = 1
         else:
-            self.net.train()
-            cnt, sum_loss = 0, 0
+            raise "NN readout currently disabled"
+        # else:
+        #     self.net.train()
+        #     cnt, sum_loss = 0, 0
 
-            start_time = time.time()
+        #     start_time = time.time()
 
-            for batch_idx, (x, y) in enumerate(tqdm(self.dataloader_train, desc="Training", unit="batch")):
-                self.optimizer.zero_grad()
-                out, _ = self.net(x.to(self.device))
-                loss = self.criterion(out[:, self.offset:], y[:, self.offset:].to(self.device))
-                loss.backward()
-                self.optimizer.step()
-                sum_loss += loss.detach().cpu().numpy()
-                cnt += 1
+        #     for batch_idx, (x, y) in enumerate(tqdm(self.dataloader_train, desc="Training", unit="batch")):
+        #         self.optimizer.zero_grad()
+        #         out, _ = self.net(x.to(self.device))
+        #         loss = self.criterion(out[:, self.offset:], y[:, self.offset:].to(self.device))
+        #         loss.backward()
+        #         self.optimizer.step()
+        #         sum_loss += loss.detach().cpu().numpy()
+        #         cnt += 1
 
-                if (batch_idx + 1) % 50 == 0:
-                    elapsed = time.time() - start_time
-                    avg_time_per_batch = elapsed / (batch_idx + 1)
-                    print(f"[Batch {batch_idx+1}/{len(self.dataloader_train)}] "
-                        f"Avg batch time: {avg_time_per_batch:.4f}s | Elapsed: {elapsed:.2f}s")
+        #         if (batch_idx + 1) % 50 == 0:
+        #             elapsed = time.time() - start_time
+        #             avg_time_per_batch = elapsed / (batch_idx + 1)
+        #             print(f"[Batch {batch_idx+1}/{len(self.dataloader_train)}] "
+        #                 f"Avg batch time: {avg_time_per_batch:.4f}s | Elapsed: {elapsed:.2f}s")
 
-            self.optimizer.zero_grad()
-            self.scheduler.step(sum_loss / cnt)
-        self.train_loss.append(sum_loss / cnt)
+        #     self.optimizer.zero_grad()
+        #     self.scheduler.step(sum_loss / cnt)
+        # self.train_loss.append(sum_loss / cnt)
                 
 
         return sum_loss / cnt
@@ -284,6 +328,7 @@ class ESNModel:
 
         # Autoregressive integration
         for t in tqdm(range(T), position=0, leave=True):
+            print(x_t.shape, h_t.shape)
             x_out, h_out = self.net.forward(x_t, h_0 = h_t)
             x_t, h_t = x_out, h_out
             x_trajectory[:, t + warm_up_length, :] = x_t.squeeze(1)

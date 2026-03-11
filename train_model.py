@@ -152,12 +152,13 @@ dataloader_val = DataLoader(
 
 network = Network(
     config["MODEL"]["input_size"],
-    500, # config["MODEL"]["reservoir_size"],
+    16, # config["MODEL"]["reservoir_size"],
     config["MODEL"]["hidden_size"],
     config["MODEL"]["output_size"],
     config["MODEL"]["scale_rec"],
     config["MODEL"]["scale_in"],
     config["MODEL"]["leaking_rate"],
+    readout_degree = config["MODEL"]["readout_degree"]
 )
 
 model = Model(
@@ -170,11 +171,11 @@ model = Model(
     device=config["TRAINING"]["device"],
 )
 
-model.load_network_embedding(config["PATH"] + tag + "_model_")
+# model.load_network_embedding(config["PATH"] + tag + "_model_")
 #%%
 config["TRAINING"]["ridge"]
 
-#%%
+#%% train model
 if config["TRAINING"]["ridge"]:
     model.train(ridge=config["TRAINING"]["ridge"])
 else:
@@ -208,6 +209,9 @@ model.net = model.net.to("cpu")
 model.save_network(config["PATH"] + tag + "_model_")
 model.net = model.net.to(model.device)
 
+#%%
+a = torch.tensor(dataset_test.input_data[i, :warmup, :], dtype=torch.get_default_dtype()).unsqueeze(0).to(model.device)
+a.shape
 #%%
 i = np.random.randint(config["DATA"]["n_test"])
 print('initial condition ', i)

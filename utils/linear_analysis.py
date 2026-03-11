@@ -39,6 +39,18 @@ def svd(X, n_components=None):
 
     return components, S, mean
 
+def project_pca(X, components):
+    batch, n_points, n_dim = X.shape
+    k = components.shape[1]
+    X_flat = X.reshape(batch * n_points, n_dim)
+    mean = X_flat.mean(axis=0)
+    X_centered = X_flat - mean
+
+    projected_flat = X_centered @ components  # (n_points, k)
+    projected = projected_flat.reshape(batch, n_points, k)
+    return projected, mean
+
+
 def reconstruct_from_pca(projected, components, mean):
     batch, n_points, k = projected.shape
     n_dim = components.shape[0]
@@ -48,14 +60,8 @@ def reconstruct_from_pca(projected, components, mean):
     return X_recon_flat.reshape(batch, n_points, n_dim)
 
 def plot_pca_projection(X, components, ax): # file_name):
-    batch, n_points, n_dim = X.shape
-    k = components.shape[1]
-    X_flat = X.reshape(batch * n_points, n_dim)
-    mean = X_flat.mean(axis=0)
-    X_centered = X_flat - mean
-
-    projected_flat = X_centered @ components  # (n_points, k)
-    projected = projected_flat.reshape(batch, n_points, k)
+    batch = X.shape[0]
+    projected, _ = project_pca(X, components)
 
     # fig = plt.figure()
     # ax = fig.add_subplot(projection='3d')
@@ -76,6 +82,31 @@ def plot_pca_projection(X, components, ax): # file_name):
     # plt.savefig(file_name, bbox_inches="tight")
     # plt.show()
     return projected, ax
+
+def plot_pca_projection_reconstructed(X, components, ax): # file_name):
+    batch = X.shape[0]
+    projected, mean = project_pca(X, components)
+    reconstructed = reconstruct_from_pca(projected, components, mean)
+
+    # fig = plt.figure()
+    # ax = fig.add_subplot(projection='3d')
+
+    for i in range(batch):
+        ax.plot(
+            reconstructed[i, :, 0],
+            reconstructed[i, :, 1],
+            reconstructed[i, :, 2]
+        )
+
+    ax.set_xlabel("PC1")
+    ax.set_ylabel("PC2")
+    ax.set_zlabel("PC3")
+    ax.set_box_aspect([1, 1, 1])
+
+    # plt.tight_layout()
+    # plt.savefig(file_name, bbox_inches="tight")
+    # plt.show()
+    return reconstructed, ax
 
 def plot_explained_variance(S, n_points, ax): # file_name="explained_variance.pdf"):
     """
